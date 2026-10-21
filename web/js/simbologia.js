@@ -20,7 +20,10 @@ export function prepararSimbologia(camadas) {
       pintura: camada.pintura, contorno: camada.contorno ?? null, legenda: camada.legenda,
     });
     const s = salvas[camada.id];
-    if (!s) continue;
+    // Simbologia salva com outro tipo de desenho (comite que era linha e virou poligono)
+    // nao serve mais e fica de lado.
+    const mesmoTipo = s && Object.keys(s.pintura ?? {}).every((prop) => prop in camada.pintura);
+    if (!s || !mesmoTipo) continue;
     camada.pintura = s.pintura;
     if (s.contorno) camada.contorno = s.contorno;
     camada.legenda = s.legenda;

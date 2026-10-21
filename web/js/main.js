@@ -187,6 +187,10 @@ async function abrirMapa() {
     for (const camada of CAMADAS.filter((c) => c.preenchimentoEmbaixo && mapa.getLayer(c.id))) {
       if (camada !== primeira) mapa.moveLayer(camada.id, primeira.id);
     }
+    // Nomes por cima de todas as camadas, na ordem do painel.
+    for (const camada of CAMADAS) {
+      if (mapa.getLayer(`${camada.id}__rotulo`)) mapa.moveLayer(`${camada.id}__rotulo`);
+    }
     adicionarRotulosUF();
     atualizarVisibilidade();
   });
@@ -264,23 +268,92 @@ function adicionarCamada(camada) {
       },
     });
   }
-  if (camada.rotulo) {
+  if (camada.rotulo) adicionarRotulo(camada, comum);
+}
+
+// Rotulos -----------------------------------------------------------------------
+// O botao Aa do painel liga o nome da camada no mapa. Poligono recebe um ponto por feicao,
+// calculado no banco para o recorte (rotulos_camada); linha e ponto rotulam pelo tile.
+
+const CHAVE_ROTULOS = "vertentes_rotulos_v1";
+const rotuladas = new Set(lerRotuladas());
+const rotulosCarregados = new Map();
+
+function lerRotuladas() {
+  try {
+    const salvas = JSON.parse(localStorage.getItem(CHAVE_ROTULOS) || "null");
+    return Array.isArray(salvas) ? salvas : ["sedes_municipais_bc250_2025"];
+  } catch { return ["sedes_municipais_bc250_2025"]; }
+}
+
+function ehPoligono(camada) {
+  return (catalogo.get(camada.id)?.geometria || "").toUpperCase().includes("POLYGON");
+}
+
+function adicionarRotulo(camada, comum) {
+  const id = `${camada.id}__rotulo`;
+  const texto = {
+    visibility: "none",
+    "text-font": ["Noto Sans Regular"],
+    "text-size": 11,
+    "text-max-width": 9,
+    "text-padding": 4,
+  };
+  const pintura = { "text-color": "#2b2b2b", "text-halo-color": "#ffffff", "text-halo-width": 1.4 };
+  if (ehPoligono(camada)) {
+    mapa.addSource(id, { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+    mapa.addLayer({ id, type: "symbol", source: id, layout: { ...texto, "text-field": ["get", "nome"] }, paint: pintura });
+  } else if (camada.tipo === "line") {
     mapa.addLayer({
-      id: `${camada.id}__rotulo`,
-      type: "symbol",
-      ...comum,
-      minzoom: 8,
-      layout: {
-        visibility: "none",
-        "text-field": ["get", camada.rotulo],
-        "text-font": ["Noto Sans Regular"],
-        "text-size": 11,
-        "text-offset": [0, 0.9],
-        "text-anchor": "top",
-      },
-      paint: { "text-color": "#2b2b2b", "text-halo-color": "#ffffff", "text-halo-width": 1.2 },
+      id, type: "symbol", ...comum,
+      layout: { ...texto, "text-field": ["get", camada.rotulo], "symbol-placement": "line", "text-font": ["Noto Sans Italic"] },
+      paint: { ...pintura, "text-color": "#2f5f80" },
+    });
+  } else {
+    mapa.addLayer({
+      id, type: "symbol", ...comum, minzoom: 8,
+      layout: { ...texto, "text-field": ["get", camada.rotulo], "text-offset": [0, 0.9], "text-anchor": "top" },
+      paint: pintura,
     });
   }
+}
+
+function rotuloVisivel(camada) {
+  return Boolean(camada.rotulo) && rotuladas.has(camada.id) && visivel(camada);
+}
+
+async function carregarRotulos(camada) {
+  const chave = `${nucleoAtual}|${municipioAtual?.cd_mun ?? ""}`;
+  if (!ehPoligono(camada) || rotulosCarregados.get(camada.id) === chave) return;
+  rotulosCarregados.set(camada.id, chave);
+  const { data, error } = await supabase.rpc("rotulos_camada", {
+    camada: camada.id,
+    campo: camada.rotulo,
+    nucleo: nucleoAtual,
+    municipio: municipioAtual?.cd_mun ?? null,
+  });
+  if (error) {
+    console.error(camada.id, error);
+    rotulosCarregados.delete(camada.id);
+    return;
+  }
+  // O recorte pode ter mudado enquanto o banco respondia.
+  if (rotulosCarregados.get(camada.id) === chave) mapa.getSource(`${camada.id}__rotulo`)?.setData(data);
+}
+
+function alternarRotulo(camada) {
+  if (rotuladas.has(camada.id)) {
+    rotuladas.delete(camada.id);
+  } else {
+    rotuladas.add(camada.id);
+    if (!ligadas.has(camada.id)) {
+      ligadas.add(camada.id);
+      const caixa = document.querySelector(`.camada[data-camada="${camada.id}"] input`);
+      if (caixa) caixa.checked = true;
+    }
+  }
+  localStorage.setItem(CHAVE_ROTULOS, JSON.stringify([...rotuladas]));
+  atualizarVisibilidade();
 }
 
 function atualizarVisibilidade() {
@@ -288,9 +361,16 @@ function atualizarVisibilidade() {
   for (const camada of CAMADAS) {
     if (!mapa.getLayer(camada.id)) continue;
     const valor = visivel(camada) ? "visible" : "none";
-    for (const sufixo of ["", "__contorno", "__rotulo", "__ponto"]) {
+    for (const sufixo of ["", "__contorno", "__ponto"]) {
       if (mapa.getLayer(camada.id + sufixo)) mapa.setLayoutProperty(camada.id + sufixo, "visibility", valor);
     }
+    if (mapa.getLayer(`${camada.id}__rotulo`)) {
+      const comNome = rotuloVisivel(camada);
+      mapa.setLayoutProperty(`${camada.id}__rotulo`, "visibility", comNome ? "visible" : "none");
+      if (comNome) carregarRotulos(camada);
+    }
+    const botao = document.querySelector(`[data-rotulo="${camada.id}"]`);
+    if (botao) botao.setAttribute("aria-pressed", String(rotuladas.has(camada.id)));
   }
   atualizarPainel();
   desenharLegenda();
@@ -421,8 +501,15 @@ function montarPainel() {
       linha.title = "Botão direito: cor, transparência e espessura";
       linha.innerHTML = `<input type="checkbox" ${ligadas.has(camada.id) ? "checked" : ""}>`
         + amostraComChave(camada)
-        + `<span>${camada.titulo}</span><small data-aviso="${camada.id}" hidden></small>`;
+        + `<span>${camada.titulo}</span><small data-aviso="${camada.id}" hidden></small>`
+        + (camada.rotulo
+          ? `<button type="button" class="botao-rotulo" data-rotulo="${camada.id}" aria-pressed="${rotuladas.has(camada.id)}" title="Mostrar os nomes no mapa">Aa</button>`
+          : "");
       linha.querySelector("input").addEventListener("change", (e) => alternar(camada.id, e.target.checked));
+      linha.querySelector(".botao-rotulo")?.addEventListener("click", (e) => {
+        e.preventDefault();
+        alternarRotulo(camada);
+      });
       linha.addEventListener("contextmenu", (e) => abrirSimbologia(e, camada, mapa, CAMADAS, aoMudarSimbologia));
       grupo.appendChild(linha);
     }

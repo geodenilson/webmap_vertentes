@@ -88,6 +88,7 @@ sql/04 a 07            filtro por núcleo, limite de 15 s, saída dos cursos d'�
                        do 07.
 sql/15_resumo_camada.sql   função resumo_camada(), números da página de informações.
 sql/16_indices_resumo.sql  índices de cobertura para o resumo.
+sql/17_rotulos_camada.sql  função rotulos_camada(), ponto do nome de cada polígono.
 web/js/simbologia.js   menu do botão direito.
 web/                   o mapa. Estático, sem etapa de build, pronto para o Vercel.
 
@@ -219,6 +220,18 @@ Tempo medido em Mineiros com cinco camadas: 7 s, dos quais 3,5 s no banco.
 O banco Micro sente muitos tiles pesados de uma vez. Afastar o mapa abaixo do zoom 6
 no núcleo inteiro, com CAR e PRODES ligados, enche a fila por minutos. Por isso o PDF
 não afasta o mapa abaixo do nível inteiro em que ele está.
+
+COMITÊS E NOMES NO MAPA, 21/10
+Os comitês de bacia, estaduais e interestaduais, passaram a ser desenhados como
+polígono: preenchimento na cor da classe, com transparência ajustável no botão direito,
+e contorno na mesma cor. Simbologia salva no navegador do tempo em que eram linha fica
+de lado e o padrão volta.
+Botão Aa no painel, à direita das camadas que têm nome (comitês, UC, terras indígenas,
+quilombolas, assentamentos, bacias, unidades de gestão hídrica, PAN, municípios,
+drenagem, sedes): liga o nome no mapa, e no PDF, e liga a camada junto. A escolha fica
+guardada no navegador. Polígono recebe um nome por feição, no centro do maior círculo que
+cabe na parte dela dentro do recorte, calculado no banco (sql/17, rotulos_camada). Rio
+recebe o nome ao longo da linha; sede, embaixo do ponto.
 
 REPOSITÓRIO E PUBLICAÇÃO
 GitHub: https://github.com/geodenilson/webmap_vertentes (ramo main). Sobe tudo, menos o

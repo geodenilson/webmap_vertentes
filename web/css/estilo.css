@@ -89,13 +89,21 @@ button.discreto { background: none; color: var(--suave); padding: 4px 6px; font-
 }
 .camada {
   display: grid;
-  grid-template-columns: 18px 14px 1fr;
+  grid-template-columns: 18px 14px 1fr auto;
   gap: 6px;
   align-items: center;
   font-size: 13px;
   padding: 3px 0;
 }
 .camada small { grid-column: 3; color: var(--suave); font-size: 11px; margin-top: -2px; }
+.botao-rotulo {
+  grid-column: 4; grid-row: 1;
+  font-family: inherit; font-size: 11px; font-weight: 600; line-height: 1;
+  padding: 2px 5px; border-radius: 4px; cursor: pointer;
+  border: 1px solid #d3ccbe; background: #fff; color: #a8a29a;
+}
+.botao-rotulo:hover { border-color: #9c937f; color: #4a453d; }
+.botao-rotulo[aria-pressed="true"] { background: #2f5e2a; border-color: #2f5e2a; color: #fff; }
 
 .amostra { width: 14px; height: 10px; border: 1px solid rgba(0, 0, 0, .25); display: inline-block; }
 .amostra.linha { height: 0; border: 0; border-top: 2px solid; }
