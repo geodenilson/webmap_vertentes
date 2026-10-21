@@ -86,6 +86,8 @@ sql/03_busca.sql       função lugares_webmap(), para a busca por núcleo e mun
 sql/04 a 07            filtro por núcleo, limite de 15 s, saída dos cursos d'água da ANA,
                        feição pequena como ponto e ponto leve. A função tile em uso é a
                        do 07.
+sql/15_resumo_camada.sql   função resumo_camada(), números da página de informações.
+sql/16_indices_resumo.sql  índices de cobertura para o resumo.
 web/js/simbologia.js   menu do botão direito.
 web/                   o mapa. Estático, sem etapa de build, pronto para o Vercel.
 
@@ -197,6 +199,26 @@ cada feição sai da mesma expressão de cor que o mapa usa para pintar, avaliad
 legenda.js. Uma camada de classes que fica com uma só continua com título e classe.
 No PRODES anual, colorido em rampa por ano, a legenda mantém os quatro anos de
 referência. A legenda da tela se refaz cada vez que o mapa termina de desenhar.
+
+PÁGINA DE INFORMAÇÕES NO PDF, 21/10
+O botão Exportar PDF abre uma janela com duas escolhas: só o mapa, ou o mapa e uma
+página de informações das camadas. Na segunda, a janela lista as camadas ligadas, cada
+uma com caixa de marcar e o que mostrar: números, gráfico e lista; números e gráfico;
+ou só os números. Núcleos, municípios e limite estadual vêm desmarcados.
+Cada camada vira um cartão: número de feições, área ou comprimento e a parte do recorte,
+gráfico de barras por classe com as cores do mapa e os maiores pelo nome (UC, rio,
+comitê, território). Os cartões vão em três colunas; o que não cabe abre outra página.
+Os números saem do banco, pela função resumo_camada (sql/15), para o recorte da tela:
+os seis núcleos, um núcleo ou um município. Num núcleo ou nos seis, a medida é o
+ha_no_nucleo ou km_no_nucleo da base oficial. Num município, e em bioma e estado, é
+medida geodésica na cópia do mapa: a feição inteira dentro do município entra com a
+medida toda, e só a que cruza a divisa é cortada. Conferido no núcleo 2: passivo RL
+113.591 ha, APP 51.962 ha, uso restrito 29.616 ha; UC 978.263 ha.
+O sql/16 cria índices de cobertura para o resumo; o do passivo caiu de 21 s para 0,1 s.
+Tempo medido em Mineiros com cinco camadas: 7 s, dos quais 3,5 s no banco.
+O banco Micro sente muitos tiles pesados de uma vez. Afastar o mapa abaixo do zoom 6
+no núcleo inteiro, com CAR e PRODES ligados, enche a fila por minutos. Por isso o PDF
+não afasta o mapa abaixo do nível inteiro em que ele está.
 
 REPOSITÓRIO E PUBLICAÇÃO
 GitHub: https://github.com/geodenilson/webmap_vertentes (ramo main). Sobe tudo, menos o

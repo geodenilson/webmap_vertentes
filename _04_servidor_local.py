@@ -30,9 +30,15 @@ class SemCache(http.server.SimpleHTTPRequestHandler):
         super().end_headers()
 
 
+class Servidor(http.server.ThreadingHTTPServer):
+    # No Windows o padrao deixa dois servidores na mesma porta, e o pedido pode cair num
+    # processo antigo travado. Assim, porta ocupada da erro na hora.
+    allow_reuse_address = False
+
+
 def main() -> None:
     manipulador = functools.partial(SemCache, directory=PASTA)
-    with http.server.ThreadingHTTPServer(("127.0.0.1", PORTA), manipulador) as servidor:
+    with Servidor(("127.0.0.1", PORTA), manipulador) as servidor:
         print(f"mapa em http://127.0.0.1:{PORTA}", flush=True)
         servidor.serve_forever()
 

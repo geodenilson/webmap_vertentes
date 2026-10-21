@@ -267,3 +267,50 @@ export const CAMADAS = [
     ...ponto("#2b2b2b", 3), legenda: [["Sede municipal", "#2b2b2b", "ponto"]], titulo_popup: "nome",
     rotulo: "nome" },
 ];
+
+// Pagina de informacoes do PDF: o campo que separa as classes no grafico e o campo que da
+// o nome na lista dos maiores. Camada sem entrada aqui sai so com os totais.
+// Nao ha nome de pessoa, CPF, CNPJ ou codigo de imovel: esses campos nem sobem para o banco.
+export const RESUMO = {
+  unidades_conservacao_cnuc_2026_09: { classe: "categoria", nome: "nome_uc" },
+  areas_prioritarias_cerrado_pantanal_2018: { classe: "import_bio", nome: "nome" },
+  areas_prioritarias_caatinga_2018: { classe: "import_bio", nome: "nome_area" },
+  pan_areas_estrategicas_icmbio_2024_05: { classe: "nomepan", nome: "nmarea" },
+  florestas_publicas_cnfp_2024_ret20250717: { classe: "protecao", nome: "nome" },
+  municipios_prioritarios_cerrado: { nome: "nm_municip" },
+  comites_estaduais: { classe: "nivel", nome: "nmcbe" },
+  comites_interestaduais: { nome: "nmcbf" },
+  unidades_gestao_hidrica_ana_2014: { nome: "uhe_nm" },
+  bacias_otto_n02_nucleo_2: { nome: "nome_bacia" },
+  massa_dagua_bc250_2025: { classe: "tipomassad", nome: "nome" },
+  drenagem_bc250_2025: { nome: "nome" },
+  car_imovel_2026_06: { classe: "mod_fiscal" },
+  car_passivo_2026_06: { classe: "classe" },
+  assentamentos_federais: { classe: "fase", nome: "nome_proje" },
+  assentamentos_reconhecidos: { nome: "nome_proje" },
+  terras_indigenas: { classe: "fase_ti", nome: "terrai_nom" },
+  quilombolas: { classe: "fase", nome: "nm_comunid" },
+  prodes_cerrado_anual_v20260717: { classe: "year" },
+  prodes_caatinga_anual_v20260805: { classe: "year" },
+  prodes_pantanal_anual_v20260717: { classe: "year" },
+  asv_sinaflor: { classe: "tipo_ativi" },
+  embargos_ibama: { classe: "des_tipo_b" },
+  embargos_icmbio_2026_10: { nome: "nome_uc" },
+  autos_infracao_ibama: { classe: "tipo_infracao" },
+  autos_infracao_icmbio_2026_10: { classe: "tipo_infra" },
+  areas_urbanizadas_ibge_2022_ed2026_08: { classe: "tipo" },
+  rodovias_dnit_snv_2026_01: { classe: "ds_superfi", nome: "vl_br" },
+  ferrovias_bc250_2025: { nome: "nome" },
+  vegetacao_ibge_2026: { classe: "legenda_1" },
+  sedes_municipais_bc250_2025: { nome: "nome" },
+  municipios_malha_2025: { nome: "nm_mun" },
+  nucleos_malha_2025: { nome: "nome_nucleo" },
+  biomas_ibge_2025: { classe: "nm_bioma" },
+  limite_estadual_malha_2025: { classe: "sigla_uf" },
+};
+
+// Rotulo legivel para classes que no banco sao codigo.
+export const ROTULO_CLASSE = {
+  car_passivo_2026_06: { APP: "APP sem vegetação", RL: "Reserva legal sem vegetação", UR: "Uso restrito sem vegetação" },
+  rodovias_dnit_snv_2026_01: { PAV: "Pavimentada", PLA: "Em pavimentação ou planejada", N_PAV: "Não pavimentada" },
+};

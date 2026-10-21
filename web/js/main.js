@@ -1,6 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 import { SUPABASE_URL, SUPABASE_CHAVE, BASE_OFICIAL } from "./config.js";
-import { CAMADAS, TEMAS } from "./camadas.js";
+import { CAMADAS, TEMAS, RESUMO } from "./camadas.js";
 import { exportarPDF } from "./pdf.js";
 import { prepararSimbologia, abrirSimbologia } from "./simbologia.js";
 import { itensLegenda, amostraDe, misturarComBranco, comClassesPresentes } from "./legenda.js";
@@ -534,20 +534,104 @@ function consultar(evento) {
 
 // PDF ------------------------------------------------------------------------
 
-$("exportar").addEventListener("click", async () => {
-  const botao = $("exportar");
-  const aviso = $("aviso-pdf");
+// Camadas de moldura: entram na lista da pagina de informacoes, mas desmarcadas.
+const MOLDURA = new Set(["nucleos_malha_2025", "municipios_malha_2025", "limite_estadual_malha_2025"]);
+
+const MODOS_RESUMO = [
+  ["completo", "Números, gráfico e lista"],
+  ["grafico", "Números e gráfico"],
+  ["numeros", "Só os números"],
+];
+
+function textoRecorte() {
+  const alvo = nucleos.find((n) => n.nucleo === nucleoAtual);
+  let recorte = alvo ? `Núcleo ${alvo.nucleo}, ${alvo.nome}` : "Os seis núcleos em execução";
+  if (municipioAtual) recorte = `${municipioAtual.nm_mun} (${municipioAtual.uf}) · ${recorte}`;
+  return recorte;
+}
+
+function montarListaPDF() {
+  const lista = $("lista-pdf");
+  const candidatas = CAMADAS.filter(visivel).reverse();
+  if (!candidatas.length) {
+    lista.innerHTML = '<p class="sub">Nenhuma camada ligada.</p>';
+    return;
+  }
+  lista.innerHTML = candidatas.map((camada) => {
+    const marcada = !MOLDURA.has(camada.id) ? "checked" : "";
+    const opcoes = MODOS_RESUMO.map(([v, r]) => `<option value="${v}">${r}</option>`).join("");
+    return `<label class="linha-pdf"><input type="checkbox" data-pdf="${camada.id}" ${marcada}>`
+      + `${amostraComChave(camada)}<span>${camada.titulo}</span>`
+      + `<select data-modo="${camada.id}">${opcoes}</select></label>`;
+  }).join("");
+}
+
+function abrirDialogoPDF() {
+  montarListaPDF();
+  $("aviso-dialogo").hidden = true;
+  $("escolha-camadas").hidden = document.querySelector('input[name="modo-pdf"]:checked').value !== "informacoes";
+  $("fundo-dialogo").hidden = false;
+}
+
+function fecharDialogoPDF() {
+  $("fundo-dialogo").hidden = true;
+}
+
+document.querySelectorAll('input[name="modo-pdf"]').forEach((radio) => {
+  radio.addEventListener("change", (e) => { $("escolha-camadas").hidden = e.target.value !== "informacoes"; });
+});
+$("cancelar-pdf").addEventListener("click", fecharDialogoPDF);
+$("fundo-dialogo").addEventListener("mousedown", (e) => { if (e.target.id === "fundo-dialogo") fecharDialogoPDF(); });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("fundo-dialogo").hidden) fecharDialogoPDF(); });
+$("exportar").addEventListener("click", abrirDialogoPDF);
+
+// Resumo de cada camada escolhida, calculado no banco para o recorte da tela. Um pedido por
+// vez, para nao disputar o banco com os tiles; a camada que falha duas vezes vai para a
+// folha com aviso.
+async function buscarResumos(escolhas, aviso) {
+  const respostas = [];
+  for (const [i, { camada, modo }] of escolhas.entries()) {
+    aviso.textContent = `Calculando as informações no banco: ${camada.titulo} (${i + 1} de ${escolhas.length}).`;
+    const campos = RESUMO[camada.id] ?? {};
+    const parametros = {
+      camada: camada.id,
+      nucleo: nucleoAtual,
+      municipio: municipioAtual?.cd_mun ?? null,
+      campo_classe: modo === "numeros" ? null : campos.classe ?? null,
+      campo_nome: modo === "completo" ? campos.nome ?? null : null,
+    };
+    let { data, error } = await supabase.rpc("resumo_camada", parametros);
+    if (error) ({ data, error } = await supabase.rpc("resumo_camada", parametros));
+    if (error) console.error(camada.id, error);
+    respostas.push({ camada, modo, campos, resumo: error ? null : data });
+  }
+  return respostas;
+}
+
+$("dialogo-pdf").addEventListener("submit", async (evento) => {
+  evento.preventDefault();
+  const comInformacoes = document.querySelector('input[name="modo-pdf"]:checked').value === "informacoes";
+  const escolhas = comInformacoes
+    ? [...document.querySelectorAll("#lista-pdf [data-pdf]:checked")].map((caixa) => ({
+      camada: CAMADAS.find((c) => c.id === caixa.dataset.pdf),
+      modo: document.querySelector(`[data-modo="${caixa.dataset.pdf}"]`).value,
+    }))
+    : [];
+
+  const botao = $("confirmar-pdf");
+  const avisoDialogo = $("aviso-dialogo");
   botao.disabled = true;
-  aviso.hidden = false;
-  aviso.textContent = "Gerando o PDF, aguarde o mapa terminar de desenhar.";
+  avisoDialogo.hidden = false;
   try {
-    const alvo = nucleos.find((n) => n.nucleo === nucleoAtual);
+    let resumos = [];
+    if (escolhas.length) {
+      resumos = await buscarResumos(escolhas, avisoDialogo);
+    }
+    avisoDialogo.textContent = "Desenhando o mapa na folha. Leva alguns segundos.";
     await carregarContornosMunicipios(nucleoAtual);
-    let recorte = alvo ? `Núcleo ${alvo.nucleo}, ${alvo.nome}` : "Os seis núcleos em execução";
-    if (municipioAtual) recorte = `${municipioAtual.nm_mun} (${municipioAtual.uf}) · ${recorte}`;
     await exportarPDF(mapa, {
       titulo: $("titulo-pdf").value.trim(),
-      recorte,
+      recorte: textoRecorte(),
       nucleoAtual,
       municipioAtual: municipioAtual?.cd_mun ?? null,
       contornos,
@@ -556,11 +640,14 @@ $("exportar").addEventListener("click", async () => {
       catalogo,
       fundo,
       base: BASE_OFICIAL,
+      resumos,
     });
-    aviso.textContent = "PDF salvo na pasta de downloads.";
+    fecharDialogoPDF();
+    $("aviso-pdf").hidden = false;
+    $("aviso-pdf").textContent = "PDF salvo na pasta de downloads.";
   } catch (erro) {
     console.error(erro);
-    aviso.textContent = "Não foi possível gerar o PDF. Veja o console do navegador.";
+    avisoDialogo.textContent = "Não foi possível gerar o PDF. Veja o console do navegador.";
   } finally {
     botao.disabled = false;
   }

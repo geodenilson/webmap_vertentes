@@ -42,6 +42,11 @@ export function amostraDe(camada, cor) {
 
 class ExpressaoDesconhecida extends Error {}
 
+// Categorias do SNUC no grupo de protecao integral (Lei 9.985/2000, art. 8).
+const PROTECAO_INTEGRAL = new Set([
+  "Estação Ecológica", "Reserva Biológica", "Parque", "Monumento Natural", "Refúgio de Vida Silvestre",
+]);
+
 function avaliar(expr, props) {
   if (!Array.isArray(expr)) return expr;
   const [op, ...args] = expr;
@@ -83,6 +88,40 @@ function avaliar(expr, props) {
     }
     default:
       throw new ExpressaoDesconhecida(op);
+  }
+}
+
+// Cor de uma classe do resumo, a mesma do mapa. Para a faixa de modulo fiscal, que chega
+// do banco ja como rotulo, a cor sai da legenda pelo rotulo. Sem cor conhecida, devolve null.
+export function corDaClasse(camada, campo, valor) {
+  const pelaLegenda = camada.legenda.find(([rotulo]) => rotulo === valor);
+  if (pelaLegenda) return pelaLegenda[1];
+  const expr = expressaoDeCor(camada);
+  if (!Array.isArray(expr)) return typeof expr === "string" ? expr : null;
+  if (expr[0] === "interpolate") {
+    // Rampa do PRODES por ano: interpola entre as paradas da propria expressao.
+    const n = Number(valor);
+    const paradas = expr.slice(3);
+    for (let i = 0; i + 3 < paradas.length; i += 2) {
+      const [a, ca, b, cb] = [paradas[i], paradas[i + 1], paradas[i + 2], paradas[i + 3]];
+      if (n <= b || i + 4 >= paradas.length) {
+        const t = Math.max(0, Math.min(1, (n - a) / (b - a)));
+        const [ra, rb] = [ca, cb].map((h) => [1, 3, 5].map((k) => parseInt(h.slice(k, k + 2), 16)));
+        return `#${ra.map((v, k) => Math.round(v + (rb[k] - v) * t).toString(16).padStart(2, "0")).join("")}`;
+      }
+    }
+    return null;
+  }
+  // Na UC a cor depende do grupo, e o resumo separa por categoria: o grupo sai da categoria.
+  const props = { [campo]: valor };
+  if (campo === "categoria") {
+    props.grupo = PROTECAO_INTEGRAL.has(valor) ? "Proteção Integral" : "Uso Sustentável";
+  }
+  try {
+    const cor = avaliar(expr, props);
+    return typeof cor === "string" ? cor : null;
+  } catch {
+    return null;
   }
 }
 

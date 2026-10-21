@@ -3,7 +3,8 @@
 // norte no alto a direita, escala embaixo a esquerda, legenda em colunas embaixo a direita
 // e fonte abaixo do quadro.
 
-import { itensLegenda, misturarComBranco, comClassesPresentes } from "./legenda.js";
+import { itensLegenda, misturarComBranco, comClassesPresentes, corDaClasse, amostraDe } from "./legenda.js";
+import { ROTULO_CLASSE } from "./camadas.js";
 
 const FOLHA = { largura: 297, altura: 210 };
 const QUADRO = { x: 8, y: 8, largura: 281, altura: 186 };
@@ -45,11 +46,22 @@ function opacidade(doc, valor) {
 
 // Foto do mapa ---------------------------------------------------------------
 
-function esperarDesenho(map, limite = 45000) {
+// O evento idle as vezes nao chega quando um tile pesado demora ou falha no banco; por
+// isso a espera confere o estado do mapa. Tile com erro conta como terminado.
+function esperarDesenho(map, limite = 30000) {
   return new Promise((resolve) => {
-    const fim = setTimeout(resolve, limite);
-    map.once("idle", () => { clearTimeout(fim); resolve(); });
+    const inicio = performance.now();
+    const conferir = () => {
+      const pronto = map.loaded() && !map.isMoving();
+      if (pronto || performance.now() - inicio > limite) {
+        map.once("render", () => resolve(pronto));
+        map.triggerRepaint();
+        return;
+      }
+      setTimeout(conferir, 200);
+    };
     map.triggerRepaint();
+    setTimeout(conferir, 300);
   });
 }
 
@@ -509,19 +521,225 @@ async function arrumarLegenda(doc, map, camadas) {
 
   const baixa = LEGENDA.alturaMaxima * LEGENDA.reducaoComColunas;
   colunas = montarColunas(doc, presentes, baixa);
+  // Abaixo do nivel inteiro atual o mapa pede todos os tiles de novo, e os de zoom baixo
+  // das camadas pesadas levam muito tempo no banco. O afastamento para nesse piso.
+  const piso = Math.floor(map.getZoom()) + 0.001;
   for (let i = 0; i < AFASTAR.maximo && legendaCobreODesenho(map, caixaDaLegenda(colunas), presentes); i += 1) {
-    map.setZoom(map.getZoom() - AFASTAR.passo);
-    await esperarDesenho(map);
+    const zoom = Math.max(piso, map.getZoom() - AFASTAR.passo);
+    if (zoom >= map.getZoom()) break;
+    map.setZoom(zoom);
+    if (!(await esperarDesenho(map, 15000))) break;
   }
   presentes = camadasPresentes(map, camadas);
   colunas = montarColunas(doc, presentes, baixa);
   return { presentes, colunas };
 }
 
+// Pagina de informacoes ------------------------------------------------------
+// Um cartao por camada escolhida: totais, grafico por classe com as cores do mapa e os
+// maiores pelo nome. Os cartoes vao em tres colunas, cada um na coluna mais curta; o que
+// nao cabe abre uma pagina de continuacao.
+
+const INFO = { x: 10, topo: 27, base: 190, colunas: 3, separacao: 8 };
+INFO.largura = (FOLHA.largura - 2 * INFO.x - (INFO.colunas - 1) * INFO.separacao) / INFO.colunas;
+
+function numero(valor, casas = 0) {
+  return Number(valor ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: casas, maximumFractionDigits: casas });
+}
+
+function encurtar(doc, texto, largura) {
+  if (doc.getTextWidth(texto) <= largura) return texto;
+  let t = texto;
+  while (t.length > 1 && doc.getTextWidth(`${t}…`) > largura) t = t.slice(0, -1);
+  return `${t.trimEnd()}…`;
+}
+
+function valorDaLinha(item, unidade) {
+  if (unidade === "ha") return `${numero(item.medida)} ha`;
+  if (unidade === "km") return `${numero(item.medida, 1)} km`;
+  return `${numero(item.feicoes)}`;
+}
+
+function totais(r) {
+  const feicoes = `${numero(r.feicoes)} ${r.unidade ? "feições" : "pontos"}`;
+  if (r.unidade === "ha") {
+    const pct = r.area_recorte ? (100 * r.medida) / r.area_recorte : null;
+    let parte = "";
+    if (pct !== null && pct > 0 && pct < 0.1) parte = " (menos de 0,1% do recorte)";
+    else if (pct !== null && pct <= 100) parte = ` (${numero(pct, 1)}% do recorte)`;
+    return `${feicoes} · ${numero(r.medida)} ha${parte}`;
+  }
+  if (r.unidade === "km") return `${feicoes} · ${numero(r.medida, 1)} km`;
+  return feicoes;
+}
+
+const ORIGEM = {
+  "base oficial": "Medida: campo de área ou comprimento no núcleo, na base oficial",
+  "medida no recorte": "Medida: calculada na parte dentro do recorte",
+  "medida na cópia do mapa": "Medida: calculada na cópia do mapa",
+};
+
+// Anos (PRODES) vao em ordem cronologica; classes que estao todas na legenda (faixas de
+// modulo fiscal) seguem a ordem dela; as demais, da maior para a menor.
+function emOrdem(camada, classes, rotulos) {
+  if (classes.every((c) => /^\d{4}$/.test(String(c.classe)))) {
+    return [...classes].sort((a, b) => Number(a.classe) - Number(b.classe));
+  }
+  const ordem = camada.legenda.map(([rotulo]) => rotulo);
+  const posicao = (c) => ordem.indexOf(rotulos[c.classe] ?? c.classe);
+  if (classes.every((c) => posicao(c) >= 0)) return [...classes].sort((a, b) => posicao(a) - posicao(b));
+  return classes;
+}
+
+function alturaDoCartao(r, modo) {
+  if (!r) return 15;
+  let h = 15;
+  if (modo !== "numeros" && r.classes?.length) h += 5 + r.classes.length * 4.6;
+  if (modo === "completo" && r.maiores?.length) h += 6 + r.maiores.length * 3.7;
+  return h + 2;
+}
+
+function desenharCartao(doc, x, y, { camada, modo, campos, resumo: r }) {
+  const largura = INFO.largura;
+  const altura = alturaDoCartao(r, modo);
+
+  doc.setDrawColor(216, 210, 198);
+  doc.setLineWidth(0.25);
+  doc.setFillColor(252, 251, 248);
+  doc.roundedRect(x, y, largura, altura, 1.5, 1.5, "FD");
+
+  // Titulo com o simbolo da camada.
+  const simbolo = amostraDe(camada, camada.legenda[0][1]);
+  amostra(doc, x + 3, y + 5, { ...simbolo, cor: simbolo.cor ?? camada.legenda[0][1] });
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(8.6);
+  doc.setTextColor(...VERDE);
+  doc.text(encurtar(doc, camada.titulo, largura - 13), x + 10, y + 6);
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(7.4);
+  doc.setTextColor(...TEXTO);
+  if (!r) {
+    doc.setTextColor(...SUAVE);
+    doc.text(doc.splitTextToSize("O banco não respondeu a tempo para esta camada. Exporte de novo em instantes.", largura - 6), x + 3, y + 10.6);
+    return;
+  }
+  doc.text(encurtar(doc, totais(r), largura - 6), x + 3, y + 10.6);
+  doc.setFontSize(5.8);
+  doc.setTextColor(...SUAVE);
+  doc.text(ORIGEM[r.origem] ?? `Medida: ${r.origem}`, x + 3, y + 13.6);
+
+  let cy = y + 15;
+
+  if (modo !== "numeros" && r.classes?.length) {
+    cy += 3.6;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(6.4);
+    doc.setTextColor(...SUAVE);
+    const porAno = r.classes.every((c) => /^\d{4}$/.test(String(c.classe)));
+    const cabeca = porAno
+      ? (r.classes.length >= 10 ? "Por ano, os dez de maior área" : "Por ano")
+      : (r.unidade ? "Por classe" : "Por classe, número de pontos");
+    doc.text(cabeca, x + 3, cy);
+    cy += 1.6;
+    const rotuloL = 30;
+    const valorL = 17;
+    const barraL = largura - 6 - rotuloL - valorL - 2;
+    const chave = r.unidade ? "medida" : "feicoes";
+    const maior = Math.max(...r.classes.map((c) => Number(c[chave]) || 0), 1);
+    const rotulos = ROTULO_CLASSE[camada.id] ?? {};
+    for (const c of emOrdem(camada, r.classes, rotulos)) {
+      const texto = rotulos[c.classe] ?? c.classe;
+      const cor = corDaClasse(camada, campos.classe, c.classe) ?? "#8aa37a";
+      const comprimento = Math.max(0.4, (barraL * (Number(c[chave]) || 0)) / maior);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(6.3);
+      doc.setTextColor(...TEXTO);
+      doc.text(encurtar(doc, texto, rotuloL - 1), x + 3, cy + 2.9);
+      doc.setFillColor(...rgb(cor));
+      doc.setDrawColor(150, 145, 135);
+      doc.setLineWidth(0.1);
+      doc.rect(x + 3 + rotuloL, cy + 0.6, comprimento, 3, "FD");
+      doc.setTextColor(...SUAVE);
+      doc.text(valorDaLinha(c, r.unidade), x + largura - 3, cy + 2.9, { align: "right" });
+      cy += 4.6;
+    }
+  }
+
+  if (modo === "completo" && r.maiores?.length) {
+    cy += 3.8;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(6.4);
+    doc.setTextColor(...SUAVE);
+    doc.text(r.unidade ? "Maiores no recorte" : "Mais frequentes no recorte", x + 3, cy);
+    cy += 1;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(6.3);
+    r.maiores.forEach((m, i) => {
+      cy += 3.7;
+      doc.setTextColor(...TEXTO);
+      doc.text(encurtar(doc, `${i + 1}. ${m.nome}`, largura - 26), x + 3, cy);
+      doc.setTextColor(...SUAVE);
+      doc.text(valorDaLinha(m, r.unidade), x + largura - 3, cy, { align: "right" });
+    });
+  }
+}
+
+function cabecalhoInformacoes(doc, titulo, recorte, areaRecorte, continuacao) {
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(13);
+  doc.setTextColor(...VERDE);
+  doc.text(continuacao ? "Informações das camadas (continuação)" : "Informações das camadas", INFO.x, 14);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  doc.setTextColor(...SUAVE);
+  const area = areaRecorte ? ` · área do recorte: ${numero(areaRecorte)} ha` : "";
+  doc.text(`${titulo} · ${recorte}${area}`, INFO.x, 19.5);
+  doc.setDrawColor(200, 194, 182);
+  doc.setLineWidth(0.3);
+  doc.line(INFO.x, 22.5, FOLHA.largura - INFO.x, 22.5);
+}
+
+function notaInformacoes(doc, base) {
+  const nota = "Áreas e comprimentos somados feição a feição: sobreposição entre feições conta duas vezes. "
+    + "Num núcleo ou nos seis, a medida é o campo ha_no_nucleo ou km_no_nucleo da base oficial "
+    + `${base}. Num município, e em bioma e estado, é medida geodésica da parte dentro do recorte, `
+    + "na cópia do mapa, com diferença pequena na borda. Sem CPF, CNPJ, nome de pessoa ou código de imóvel.";
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(6);
+  doc.setTextColor(...SUAVE);
+  doc.text(doc.splitTextToSize(nota, FOLHA.largura - 2 * INFO.x), INFO.x, 197);
+}
+
+function desenharInformacoes(doc, resumos, { titulo, recorte, base }) {
+  if (!resumos?.length) return;
+  const areaRecorte = resumos.find((item) => item.resumo)?.resumo.area_recorte;
+  let colunas = Array(INFO.colunas).fill(INFO.topo);
+  const novaPagina = (continuacao) => {
+    doc.addPage("a4", "landscape");
+    cabecalhoInformacoes(doc, titulo, recorte, areaRecorte, continuacao);
+    notaInformacoes(doc, base);
+    colunas = Array(INFO.colunas).fill(INFO.topo);
+  };
+  novaPagina(false);
+  for (const item of resumos) {
+    const altura = alturaDoCartao(item.resumo, item.modo);
+    let coluna = colunas.indexOf(Math.min(...colunas));
+    if (colunas[coluna] + altura > INFO.base) {
+      novaPagina(true);
+      coluna = 0;
+    }
+    const x = INFO.x + coluna * (INFO.largura + INFO.separacao);
+    desenharCartao(doc, x, colunas[coluna], item);
+    colunas[coluna] += altura + 5;
+  }
+}
+
 // Folha ----------------------------------------------------------------------
 
 export async function exportarPDF(map, {
   titulo, recorte, nucleoAtual, municipioAtual, contornos, contornosMunicipios, camadas, catalogo, fundo, base,
+  resumos = [],
 }) {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
@@ -557,6 +775,8 @@ export async function exportarPDF(map, {
   doc.setFontSize(6.2);
   doc.setTextColor(...SUAVE);
   doc.text(doc.splitTextToSize(rodape, QUADRO.largura), QUADRO.x, RODAPE_Y);
+
+  desenharInformacoes(doc, resumos, { titulo: titulo || "Projeto Vertentes", recorte, base });
 
   const carimbo = `${hoje.getFullYear()}${String(hoje.getMonth() + 1).padStart(2, "0")}${String(hoje.getDate()).padStart(2, "0")}`
     + `_${String(hoje.getHours()).padStart(2, "0")}${String(hoje.getMinutes()).padStart(2, "0")}`;
