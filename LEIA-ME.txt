@@ -1,0 +1,207 @@
+DEMANDA 017 - WEBMAP DO PROJETO VERTENTES
+Denilson Passo, 15/10/2026
+
+O QUE É
+Um mapa na web, aberto no navegador, que lê as camadas da base oficial
+(Demandas/013_Base_Nucleos_gpkg/Vertentes_nucleos_v20261004b.gpkg) a partir de um
+banco PostgreSQL/PostGIS no Supabase. Qualquer pessoa da equipe liga e desliga camada,
+dá zoom num município e exporta a vista em PDF, no padrão da coleção de mapas, para
+apresentação e documento.
+
+Pedido feito na reunião presencial de 15/10: ferramenta de leitura da paisagem,
+tratada como urgente. O exemplo da sala foi Barra do Garças, com hidrografia, RPPN,
+imóvel, passivo e unidade de conservação.
+
+O PONTO QUE DECIDE O PLANO
+A geometria das 51 camadas soma 2,4 GB. O plano gratuito do Supabase limita o banco
+a 500 MB. As cinco camadas maiores são quase três quartos disso:
+
+    car_passivo_2026_06               894 MB    324.819 polígonos
+    car_imovel_2026_06                225 MB    297.963
+    prodes_cerrado_anual              217 MB    381.936
+    prodes_cerrado_acumulado          210 MB     44.948
+    sigef_privado                     177 MB    135.153
+
+Um mapa na tela não precisa da precisão de cálculo. A cópia que vai para a web é
+simplificada e com menos casas decimais. A base oficial continua sendo o GeoPackage,
+e todo número continua saindo dele. Antes de escolher o plano, a medição da cópia
+simplificada diz se cabe nos 500 MB ou se é preciso o plano pago, que inclui 8 GB.
+
+COMO VAI FUNCIONAR
+1. Cópia para a web. Cada camada é simplificada na escala em que aparece, perde os
+   campos que não servem ao mapa e é gravada no esquema vertentes do banco, com
+   índice espacial.
+2. Dado pessoal fica fora. Embargo, auto de infração, autorização de supressão e
+   CAR trazem CPF, CNPJ, nome de autuado e código de imóvel. Nada disso sobe.
+3. Entrega ao mapa. O banco devolve a camada em pedaços pequenos, por zoom
+   (vector tiles, função ST_AsMVT do PostGIS), e não o arquivo inteiro. Assim o
+   CAR e o PRODES abrem rápido mesmo com centenas de milhares de polígonos.
+4. Mapa. MapLibre GL, com a mesma cor e a mesma legenda da coleção. Painel de
+   camadas por tema, busca por município e por núcleo, e mapa de fundo.
+5. Exportação em PDF. A vista atual vira uma folha A4 deitada, no layout da coleção:
+   título, mapa, legenda das camadas ligadas, norte, escala e fonte.
+6. Rasters do MapBiomas (bases/gee/Vertentes_MapBiomas) ficam para uma segunda
+   etapa. Eles não vão para o PostGIS. Sobem como arquivo para o armazenamento do
+   Supabase e o mapa lê de lá.
+
+O QUE EU FAÇO SOZINHO
+- Medir a cópia simplificada e dizer qual plano do Supabase serve.
+- Montar o esquema, os índices e as funções de tile no banco, e subir as camadas.
+- Ligar as permissões do banco para só quem tiver login ler as camadas.
+- Escrever o mapa, a legenda, a busca e a exportação em PDF.
+- Testar no navegador, aqui na máquina, antes de publicar.
+- Atualizar o banco quando sair nova versão da base, mantendo a versão anterior.
+
+O QUE PRECISA DE VOCÊ
+1. Criar o projeto no Supabase. Nome sugerido: vertentes-webmap. Região:
+   South America (São Paulo). Guardar a senha do banco.
+   Depois me passar três coisas: o endereço do projeto (Project URL), a chave
+   pública (anon key) e a cadeia de conexão do banco (Connection string, aba
+   Database). Elas ficam no arquivo .env desta pasta, fora do OneDrive, e não vão
+   para nenhum documento.
+2. Decidir quem acessa. Recomendo login com e-mail da equipe, por causa do CAR e
+   dos embargos. Link aberto ao público só depois de revisar o que pode sair.
+3. Publicação no Vercel, com a conta do Denilson. Até lá, o mapa roda aqui na
+   máquina.
+
+DECIDIDO EM 15/10
+Conta paga do Supabase, organização geodenilson's Org, plano Pro, que inclui 8 GB de
+disco: a base cabe inteira. A cópia simplificada continua, por velocidade.
+Projeto webmap_vertentes, compute Micro, região São Paulo. Publicação no Vercel.
+
+ARQUIVOS
+LEIA-ME.txt     este arquivo
+.env            credenciais do Supabase, preenchido pelo Denilson. Não sai da máquina.
+.gitignore      impede que o .env e os arquivos gerados subam para o GitHub
+
+_01_copia_web.py       gera _cache/vertentes_web_v20261004b.gpkg: Web Mercator, simplificada,
+                       sem dado pessoal. 1,36 GB de geometria contra 2,43 GB da base.
+                       Três polígonos do passivo e um da ASV somem na simplificação: são
+                       lascas que viram geometria vazia.
+_02_subir_supabase.py  sobe a cópia para o esquema vertentes, da menor para a maior camada.
+_03_gerar_config.py    grava web/js/config.js com o endereço e a chave pública.
+sql/01_esquema.sql     PostGIS, esquema vertentes e catálogo de camadas.
+sql/02_tiles.sql       função tile(camada, z, x, y), só para quem tem login.
+sql/03_busca.sql       função lugares_webmap(), para a busca por núcleo e município.
+sql/04 a 07            filtro por núcleo, limite de 15 s, saída dos cursos d'água da ANA,
+                       feição pequena como ponto e ponto leve. A função tile em uso é a
+                       do 07.
+web/js/simbologia.js   menu do botão direito.
+web/                   o mapa. Estático, sem etapa de build, pronto para o Vercel.
+
+ANDAMENTO EM 15/10
+As 51 camadas estão no banco, 1,3 GB. No primeiro envio, o disco encheu no PRODES anual
+do Cerrado e o banco caiu. Ele voltou sozinho, com o disco em 25%, e as três camadas que
+faltavam subiram uma por vez. Se o disco precisar crescer, a tela é Settings >
+Infrastructure no painel do Supabase.
+Tile das camadas pesadas, medido no banco: passivo e imóvel do CAR no zoom 11 e 12
+abaixo de 0,1 s; PRODES anual no zoom 9, 0,13 s; PAN no zoom 5, 0,5 s.
+Login: um usuário criado e confirmado, cadastro livre desligado. Sem login a API
+recusa o tile.
+O tile só sai no formato certo quando o pedido traz o cabeçalho
+Accept: application/vnd.mapbox-vector-tile. O mapa manda esse cabeçalho.
+
+MUDANÇAS DE 16/10, PEDIDAS PELO DENILSON
+1. Seletor de núcleo no lugar da busca. Com um núcleo escolhido, o próprio banco filtra
+   cada tile pelo campo nucleo. Bioma e limite estadual, que não têm o campo, ficam
+   inteiros como contexto.
+2. CAR, SIGEF, SNCI, PRODES anual, drenagem e ASV só aparecem com um núcleo escolhido,
+   e já na escala do núcleo inteiro. Na vista dos nove ficam desligadas.
+   Na escala do núcleo a maior parte do passivo é menor que um pixel: metade das
+   manchas de APP do núcleo 2 tem menos de 0,73 ha. Por isso, nas camadas de feição
+   pequena, o que tem menos de dois pixels chega como ponto, com a cor da classe, e
+   volta a ser polígono ao aproximar. Abaixo do zoom 10 o tile leva só o campo da cor,
+   para não pesar. O tile mais pesado, o imóvel do CAR do núcleo 3 inteiro, tem 1,5 MB
+   e leva cerca de 4 s.
+   Filtro padrão na drenagem: só os trechos com nome. No núcleo 2 são 6.082 com nome
+   e 3.895 sem.
+3. Cursos d'água da ANA saíram do mapa e do banco. Continuam na base oficial.
+4. Botão direito sobre a camada, no painel ou na legenda: cor de cada classe,
+   transparência e espessura de linha, contorno ou ponto. "Voltar ao padrão" desfaz.
+   A mudança fica guardada no navegador de quem mudou e vale para a legenda e o PDF.
+5. O preenchimento do núcleo passou para baixo de todas as camadas. Por cima, ele
+   apagava as cores.
+O limite de consulta do papel authenticated subiu de 8 para 15 s (sql/05).
+
+SEGUNDA RODADA DE 16/10
+Só os seis núcleos em execução, como o Gustavo pediu: o seletor lista os seis, e na vista
+geral o banco só manda o que tem selecionado = 'Sim'. Bioma e limite estadual ficam
+inteiros (sql/08).
+PDF no layout da coleção: o mapa ocupa a folha, A4 deitado. O mapinha "No Brasil" fica
+no alto à esquerda; com um núcleo escolhido entra também "Nos núcleos", com o núcleo
+em destaque entre os seis. Título no alto, norte à direita, escala embaixo à esquerda.
+A legenda fica dentro do mapa, no canto inferior direito, e quebra em colunas de até
+64 mm de altura. Camada sem classe aparece só com o nome. Camada com classes ganha o
+nome como título, com uma linha por classe. A mesma regra vale para a legenda da tela.
+Os contornos dos mapinhas vêm da função contornos_pdf(), simplificados.
+
+TERCEIRA RODADA DE 16/10
+Legenda: as classes ficam recuadas sob o título da camada. O símbolo segue a
+geometria de origem: polígono é sempre retângulo, vazado quando a camada só tem
+contorno; linha é traço; ponto é ponto. Uma camada que cabe inteira numa coluna não
+se parte entre colunas.
+PDF: antes da foto, o app confere quais camadas desenham alguma coisa no recorte e só
+essas entram na legenda e na fonte. Com um núcleo escolhido, a camada ligada que não
+tem nada ali fica fora. Com uma coluna, a legenda vai até 64 mm de altura. Com duas
+ou mais, vai até 45 mm, e o mapa se afasta de 0,2 em 0,2 nível de zoom, no máximo
+1,2, até a legenda sair de cima do núcleo. O subtítulo fica centrado com o título.
+Rótulo dos estados (sigla_uf) sempre ligado, por cima de tudo. O ponto de cada sigla
+vem de rotulos_uf() e cai dentro do pedaço do estado que aparece no recorte (sql/09).
+A sigla fica fora do desenho do núcleo, colada a ele: o recorte é o núcleo com folga de
+6% (5% na vista dos seis) e a sigla fica a 2% do contorno. Se o estado inteiro cair
+dentro do núcleo, a sigla volta para dentro. A conta leva 3 s e fica guardada na visão
+materializada vertentes.rotulos_uf_pontos (sql/11). Quando a base mudar:
+    refresh materialized view vertentes.rotulos_uf_pontos;
+
+RECORTE POR MUNICÍPIO, 16/10
+Abaixo do núcleo há uma segunda seleção, opcional, com os municípios do núcleo
+escolhido. Com um município, cada camada chega do banco recortada pelo contorno dele:
+a feição que cruza a divisa vem só com o pedaço de dentro, e a que está inteira dentro
+passa sem corte. A camada de municípios mostra só o escolhido. Bioma e limite estadual
+continuam inteiros. O mapa centraliza no município, e o PDF também.
+O contorno usado no corte é simplificado em meio pixel do zoom pedido. Pior caso medido:
+o passivo de Mineiros no zoom 9, cerca de 1 s por tile.
+O município é identificado por código e núcleo juntos, porque Brasília vem repartida,
+um pedaço por núcleo (3, 4 e 9).
+No PDF entra um terceiro mapinha, "No núcleo", embaixo do "No Brasil" e do mesmo
+tamanho: todos os municípios do núcleo, com o escolhido em destaque. O subtítulo traz
+o município e o núcleo (sql/12).
+Ajuste: a camada de núcleos não é mais recortada pelo município. O limite do núcleo fica
+inteiro e o município aparece com a cor dele. Recortada, ela desenhava a divisa do
+município com a cor e a espessura do núcleo (coluna recorta_municipio do catálogo).
+
+PAINEL FILTRADO PELO RECORTE, 16/10
+Com um núcleo ou município escolhido, o painel só mostra as camadas que têm alguma
+feição ali. Bioma e limite estadual ficam sempre, e o tema sem nenhuma camada some. Na
+vista dos seis núcleos aparecem todas. O que estava ligado continua guardado: a camada
+volta ligada quando reaparece. No núcleo 2 ficam 40 camadas, mais as duas de contexto.
+Em Mineiros, 36 mais as duas.
+A presença fica na tabela vertentes.presenca, por núcleo e por município. No município,
+a feição precisa entrar nele; só encostar na divisa não conta. A conta leva 19 s.
+Quando a base mudar:
+    select vertentes.recalcular_presenca();
+    refresh materialized view vertentes.rotulos_uf_pontos;
+(sql/13).
+
+AJUSTES DE 16/10, FIM DA TARDE
+PAN, área de abrangência saiu do mapa e do banco (sql/14). Do PAN fica só a camada de
+áreas estratégicas. Continua na base oficial, e os scripts de carga não a trazem de volta.
+Ligadas por padrão: só limite estadual, núcleos e municípios.
+Lixeira na legenda da tela, à esquerda de cada camada: desliga a camada e desmarca o
+painel.
+Com um município escolhido, o contorno dele fica mais grosso, na cor padrão de
+município: 2,2 contra 0,6.
+Os temas do painel abrem todos fechados.
+A legenda, na tela e no PDF, mostra só as classes que aparecem no desenho. A classe de
+cada feição sai da mesma expressão de cor que o mapa usa para pintar, avaliada em
+legenda.js. Uma camada de classes que fica com uma só continua com título e classe.
+No PRODES anual, colorido em rampa por ano, a legenda mantém os quatro anos de
+referência. A legenda da tela se refaz cada vez que o mapa termina de desenhar.
+
+COMO RODAR O MAPA AQUI NA MÁQUINA
+    python _03_gerar_config.py
+    python _04_servidor_local.py
+e abrir http://127.0.0.1:8017 no navegador.
+Não usar o python -m http.server: ele não manda Cache-Control, e o Chrome abria o mapa
+com a folha de estilo antiga. O _04 manda no-cache, e o web/vercel.json faz o mesmo no
+Vercel. Ao mudar CSS ou JS, subir também o número ?v= no index.html.

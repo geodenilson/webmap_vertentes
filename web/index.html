@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Projeto Vertentes · Mapa</title>
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+  <link rel="stylesheet" href="css/estilo.css?v=20261016k">
+</head>
+<body>
+  <section id="tela-login" class="tela">
+    <form id="form-login" class="cartao">
+      <h1>Projeto Vertentes</h1>
+      <p class="sub">Mapa dos núcleos. Acesso da equipe.</p>
+      <label>E-mail <input type="email" id="email" autocomplete="username" required></label>
+      <label>Senha <input type="password" id="senha" autocomplete="current-password" required></label>
+      <button type="submit">Entrar</button>
+      <p id="erro-login" class="erro" hidden></p>
+    </form>
+  </section>
+
+  <section id="tela-mapa" class="tela" hidden>
+    <aside id="painel">
+      <header>
+        <h1>Projeto Vertentes</h1>
+        <button id="sair" class="discreto" title="Sair">Sair</button>
+      </header>
+
+      <div class="bloco">
+        <label class="rotulo" for="nucleo">Núcleo</label>
+        <select id="nucleo">
+          <option value="">Os seis núcleos</option>
+        </select>
+        <label class="rotulo segundo" for="municipio">Município <span class="sub">(opcional)</span></label>
+        <select id="municipio" disabled>
+          <option value="">Escolha um núcleo antes</option>
+        </select>
+      </div>
+
+      <div class="bloco fundo">
+        <span>Fundo</span>
+        <label><input type="radio" name="fundo" value="mapa" checked> Mapa</label>
+        <label><input type="radio" name="fundo" value="satelite"> Satélite</label>
+      </div>
+
+      <div id="lista-camadas" class="bloco rolar"></div>
+
+      <div class="bloco exportar">
+        <input id="titulo-pdf" type="text" placeholder="Título do mapa para o PDF">
+        <button id="exportar">Exportar PDF</button>
+        <p id="aviso-pdf" class="sub" hidden></p>
+      </div>
+    </aside>
+
+    <main id="mapa"></main>
+    <div id="legenda" class="cartao"></div>
+    <div id="simbologia" class="cartao" hidden></div>
+  </section>
+
+  <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+  <script src="https://unpkg.com/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
+  <script type="module" src="js/main.js?v=20261016k"></script>
+</body>
+</html>
