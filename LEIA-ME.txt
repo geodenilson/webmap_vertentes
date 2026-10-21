@@ -198,6 +198,19 @@ legenda.js. Uma camada de classes que fica com uma só continua com título e cl
 No PRODES anual, colorido em rampa por ano, a legenda mantém os quatro anos de
 referência. A legenda da tela se refaz cada vez que o mapa termina de desenhar.
 
+REPOSITÓRIO E PUBLICAÇÃO
+GitHub: https://github.com/geodenilson/webmap_vertentes (ramo main). Sobe tudo, menos o
+.env e o _cache. O web/js/config.js vai junto: ele só tem o endereço do Supabase e a
+chave publicável, que sem login não lê camada nenhuma.
+Nesta máquina o git usa o repositório de certificados do Windows só neste projeto
+(http.sslBackend = schannel). Com o padrão do Git, o envio falhava na verificação do
+certificado do GitHub.
+Vercel: importar o repositório, Root Directory = web, Framework Preset = Other, sem
+comando de build e sem variável de ambiente. O web/vercel.json manda o navegador
+revalidar os arquivos a cada carga.
+Depois de publicar, colocar o endereço do Vercel no Supabase, em Authentication > URL
+Configuration (Site URL).
+
 COMO RODAR O MAPA AQUI NA MÁQUINA
     python _03_gerar_config.py
     python _04_servidor_local.py
