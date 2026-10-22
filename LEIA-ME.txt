@@ -233,6 +233,14 @@ guardada no navegador. Polígono recebe um nome por feição, no centro do maior
 cabe na parte dela dentro do recorte, calculado no banco (sql/17, rotulos_camada). Rio
 recebe o nome ao longo da linha; sede, embaixo do ponto.
 
+ORDEM DAS CAMADAS NA LEGENDA, 22/10
+Na legenda da direita, cada camada pode ser arrastada para cima ou para baixo, e o mapa
+redesenha nessa ordem: a de cima na legenda fica por cima no mapa. O painel da esquerda
+não muda. Os nomes (botão Aa) e as siglas dos estados continuam por cima de tudo, e o
+preenchimento do núcleo continua embaixo de tudo; só o contorno do núcleo acompanha a
+ordem. A ordem fica guardada no navegador e vale também para a legenda e a lista do PDF.
+O botão "ordem padrão", no título da legenda, volta à ordem original.
+
 REPOSITÓRIO E PUBLICAÇÃO
 GitHub: https://github.com/geodenilson/webmap_vertentes (ramo main). Sobe tudo, menos o
 .env e o _cache. O web/js/config.js vai junto: ele só tem o endereço do Supabase e a

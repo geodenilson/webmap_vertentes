@@ -141,6 +141,18 @@ button.discreto { background: none; color: var(--suave); padding: 4px 6px; font-
   cursor: pointer;
 }
 #legenda .remover:hover { color: var(--destaque); background: #f6e9e2; }
+#legenda h2 { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+#legenda .ordem-padrao {
+  font: inherit; font-size: 10px; text-transform: none; color: var(--suave);
+  background: none; border: 1px solid #d3ccbe; border-radius: 4px; padding: 1px 6px; cursor: pointer;
+}
+#legenda .ordem-padrao:hover { color: #4a453d; border-color: #9c937f; }
+#legenda .camada-legenda { border-top: 2px solid transparent; border-bottom: 2px solid transparent; border-radius: 3px; }
+#legenda .camada-legenda:hover { background: #f7f4ee; }
+#legenda .camada-legenda.arrastado { opacity: .45; }
+#legenda .camada-legenda.acima { border-top-color: var(--destaque); }
+#legenda .camada-legenda.abaixo { border-bottom-color: var(--destaque); }
+#legenda .camada-legenda .grupo, #legenda .camada-legenda .item { cursor: grab; }
 
 .rotulo { display: block; font-size: 12px; color: var(--suave); margin-bottom: 4px; }
 .rotulo.segundo { margin-top: 10px; }

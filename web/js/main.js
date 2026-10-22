@@ -191,6 +191,7 @@ async function abrirMapa() {
     for (const camada of CAMADAS) {
       if (mapa.getLayer(`${camada.id}__rotulo`)) mapa.moveLayer(`${camada.id}__rotulo`);
     }
+    if (ordemMudou()) aplicarOrdem();
     adicionarRotulosUF();
     atualizarVisibilidade();
   });
@@ -535,15 +536,77 @@ function atualizarPainel() {
   }
 }
 
+// Ordem de desenho -------------------------------------------------------------
+// A ordem vem de CAMADAS e pode ser mudada arrastando a camada na legenda da direita. A
+// lista guarda todas as camadas, de cima para baixo; a que for ligada depois entra na
+// posicao padrao entre as outras. O painel da esquerda nao muda.
+
+const CHAVE_ORDEM = "vertentes_ordem_v1";
+const ORDEM_PADRAO = CAMADAS.map((c) => c.id).reverse();
+let ordemTopo = lerOrdem();
+let arrastando = null;
+
+function lerOrdem() {
+  try {
+    const salva = JSON.parse(localStorage.getItem(CHAVE_ORDEM) || "null");
+    const mesmas = Array.isArray(salva) && salva.length === ORDEM_PADRAO.length
+      && ORDEM_PADRAO.every((id) => salva.includes(id));
+    return mesmas ? salva : [...ORDEM_PADRAO];
+  } catch { return [...ORDEM_PADRAO]; }
+}
+
+function ordemMudou() {
+  return ordemTopo.some((id, i) => id !== ORDEM_PADRAO[i]);
+}
+
+// Camadas ligadas na ordem de desenho, a de cima primeiro. Vale para legenda e PDF.
+function camadasNaOrdem() {
+  const porId = new Map(CAMADAS.map((c) => [c.id, c]));
+  return ordemTopo.map((id) => porId.get(id)).filter((c) => c && visivel(c));
+}
+
+// Sobe as camadas, da de baixo para a de cima, ate logo abaixo dos nomes. O preenchimento
+// do nucleo fica onde esta, embaixo de tudo; so o contorno dele acompanha a ordem.
+function aplicarOrdem() {
+  if (!mapa) return;
+  const ancora = mapa.getStyle().layers.find((l) => l.id.endsWith("__rotulo") || l.id === "rotulos_uf")?.id;
+  const porId = new Map(CAMADAS.map((c) => [c.id, c]));
+  for (const id of [...ordemTopo].reverse()) {
+    const camada = porId.get(id);
+    if (!camada || !mapa.getLayer(id)) continue;
+    const partes = camada.preenchimentoEmbaixo ? [] : [id];
+    partes.push(`${id}__contorno`, `${id}__ponto`);
+    for (const parte of partes) {
+      if (mapa.getLayer(parte)) mapa.moveLayer(parte, ancora);
+    }
+  }
+}
+
+function moverNaOrdem(id, alvo, depois) {
+  if (id === alvo) return;
+  const lista = ordemTopo.filter((x) => x !== id);
+  const i = lista.indexOf(alvo);
+  lista.splice(depois ? i + 1 : i, 0, id);
+  ordemTopo = lista;
+  localStorage.setItem(CHAVE_ORDEM, JSON.stringify(ordemTopo));
+  aplicarOrdem();
+  desenharLegenda();
+}
+
 function desenharLegenda() {
+  if (arrastando) return;
   const caixa = $("legenda");
-  const visiveis = CAMADAS.filter(visivel).reverse();
+  const visiveis = camadasNaOrdem();
   if (!visiveis.length) { caixa.innerHTML = ""; return; }
-  let html = "<h2>Legenda</h2>";
+  const padrao = ordemMudou()
+    ? '<button type="button" class="ordem-padrao" data-ordem-padrao title="Voltar à ordem original das camadas">ordem padrão</button>'
+    : "";
+  let html = `<h2>Legenda${padrao}</h2>`;
   for (const camada of visiveis) {
     // So as classes que aparecem no desenho da tela.
     const ids = mapa ? [camada.id, `${camada.id}__contorno`, `${camada.id}__ponto`].filter((id) => mapa.getLayer(id)) : [];
     const feicoes = ids.length ? mapa.queryRenderedFeatures({ layers: ids }) : [];
+    html += `<div class="camada-legenda" draggable="true" data-bloco="${camada.id}" title="Arraste para mudar a ordem no mapa">`;
     itensLegenda(comClassesPresentes(camada, feicoes)).forEach((item, i) => {
       // A lixeira fica na primeira linha da camada: no titulo, ou na linha unica.
       const lixeira = i === 0 ? botaoRemover(camada) : "";
@@ -551,10 +614,52 @@ function desenharLegenda() {
         ? `<div class="grupo" data-camada="${item.camada}">${lixeira}<span>${item.texto}</span></div>`
         : `<div class="item${item.nivel ? " classe" : ""}" data-camada="${item.camada}">${lixeira}${amostraHTML(item)}<span>${item.texto}</span></div>`;
     });
+    html += "</div>";
   }
   // So troca o conteudo quando mudou, para a legenda nao piscar a cada desenho do mapa.
   if (caixa.innerHTML !== html) caixa.innerHTML = html;
 }
+
+function limparMarcas() {
+  for (const b of document.querySelectorAll("#legenda .camada-legenda")) b.classList.remove("acima", "abaixo", "arrastado");
+}
+
+$("legenda").addEventListener("dragstart", (e) => {
+  const bloco = e.target.closest?.("[data-bloco]");
+  if (!bloco) return;
+  arrastando = bloco.dataset.bloco;
+  bloco.classList.add("arrastado");
+  e.dataTransfer.effectAllowed = "move";
+  e.dataTransfer.setData("text/plain", arrastando);
+});
+
+$("legenda").addEventListener("dragover", (e) => {
+  const bloco = e.target.closest("[data-bloco]");
+  if (!arrastando || !bloco) return;
+  e.preventDefault();
+  const r = bloco.getBoundingClientRect();
+  const depois = e.clientY > r.top + r.height / 2;
+  for (const b of document.querySelectorAll("#legenda .camada-legenda")) b.classList.remove("acima", "abaixo");
+  if (bloco.dataset.bloco !== arrastando) bloco.classList.add(depois ? "abaixo" : "acima");
+});
+
+$("legenda").addEventListener("drop", (e) => {
+  const bloco = e.target.closest("[data-bloco]");
+  if (!arrastando || !bloco) return;
+  e.preventDefault();
+  const r = bloco.getBoundingClientRect();
+  const id = arrastando;
+  arrastando = null;
+  limparMarcas();
+  moverNaOrdem(id, bloco.dataset.bloco, e.clientY > r.top + r.height / 2);
+});
+
+$("legenda").addEventListener("dragend", () => {
+  if (!arrastando) return;
+  arrastando = null;
+  limparMarcas();
+  desenharLegenda();
+});
 
 function botaoRemover(camada) {
   return `<button type="button" class="remover" data-remover="${camada.id}" title="Desligar ${camada.titulo}" aria-label="Desligar ${camada.titulo}">`
@@ -563,6 +668,13 @@ function botaoRemover(camada) {
 }
 
 $("legenda").addEventListener("click", (e) => {
+  if (e.target.closest("[data-ordem-padrao]")) {
+    ordemTopo = [...ORDEM_PADRAO];
+    localStorage.removeItem(CHAVE_ORDEM);
+    aplicarOrdem();
+    desenharLegenda();
+    return;
+  }
   const botao = e.target.closest("[data-remover]");
   if (!botao) return;
   const id = botao.dataset.remover;
@@ -639,7 +751,7 @@ function textoRecorte() {
 
 function montarListaPDF() {
   const lista = $("lista-pdf");
-  const candidatas = CAMADAS.filter(visivel).reverse();
+  const candidatas = camadasNaOrdem();
   if (!candidatas.length) {
     lista.innerHTML = '<p class="sub">Nenhuma camada ligada.</p>';
     return;
@@ -723,7 +835,7 @@ $("dialogo-pdf").addEventListener("submit", async (evento) => {
       municipioAtual: municipioAtual?.cd_mun ?? null,
       contornos,
       contornosMunicipios: contornosMunicipios.get(nucleoAtual) ?? [],
-      camadas: CAMADAS.filter(visivel).reverse(),
+      camadas: camadasNaOrdem(),
       catalogo,
       fundo,
       base: BASE_OFICIAL,
