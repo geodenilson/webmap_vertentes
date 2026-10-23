@@ -270,6 +270,21 @@ não subiu abre sem a imagem.
 Banco: sql/18 (tile com fid como id do MVT, tabela planet_cenas) e sql/20 (imovel_webmap,
 tabela imovel_vegetacao). O disco do banco foi aumentado para 32 GB em 23/10.
 
+Ajustes da tarde de 23/10, pedidos pelo Denilson:
+- Painel: Núcleo, Município (sem "opcional") e uma terceira seleção, "Imóvel do CAR",
+  que só libera com um município escolhido. Ligada, mostra os imóveis do município só pelo
+  contorno amarelo, e o clique num deles abre o imóvel. A camada "Imóveis do CAR", no grupo
+  CAR e fundiário, continua como tema e não abre mais o imóvel.
+- A ficha do imóvel saiu do painel e virou um quadro sobre o mapa, no canto superior
+  esquerdo, com botão × que fecha o imóvel. O enquadramento desvia do quadro.
+- Com um imóvel aberto, todos os temas com campo de núcleo chegam recortados pelo limite
+  dele, como já acontecia com o município (sql/21: tile e rotulos_camada ganham o
+  parâmetro imovel). Núcleo, bioma e limite estadual seguem inteiros.
+- A vegetação passou a ser recortada pelo limite exato do imóvel; a imagem segue com 100 m
+  de folga. A biblioteca de COG tem uma máscara só por cópia carregada, então a vegetação
+  vem de uma segunda cópia (jsDelivr, protocolo cogveg://) com a máscara do imóvel.
+- O × dos popups de consulta ficou maior.
+
 REPOSITÓRIO E PUBLICAÇÃO
 GitHub: https://github.com/geodenilson/webmap_vertentes (ramo main). Sobe tudo, menos o
 .env e o _cache. O web/js/config.js vai junto: ele só tem o endereço do Supabase e a

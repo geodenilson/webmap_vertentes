@@ -114,11 +114,15 @@ async function atualizarPresentes() {
   presentes = new Set(data ?? []);
 }
 
-function urlTile(camada) {
+// Com um imovel aberto, os temas chegam recortados por ele (sql/21). A camada de escolha
+// dos imoveis pede sem esse recorte, para dar para clicar em outro.
+function urlTile(camada, { semImovel = false } = {}) {
   let url = `${URL_TILE}?camada=${camada.id}&z={z}&x={x}&y={y}`;
   if (camada.contexto || nucleoAtual === null) return url;
   url += `&nucleo=${nucleoAtual}`;
   if (municipioAtual) url += `&municipio=${municipioAtual.cd_mun}`;
+  const imovel = semImovel ? null : imovelAtual();
+  if (imovel) url += `&imovel=${imovel.id}`;
   return url;
 }
 
@@ -197,7 +201,11 @@ async function abrirMapa() {
     if (ordemMudou()) aplicarOrdem();
     adicionarRotulosUF();
     atualizarVisibilidade();
-    iniciarImovel({ mapa, supabase, aoMudar: desenharLegenda });
+    adicionarSelecaoCar();
+    iniciarImovel({
+      mapa, supabase, aoMudar: desenharLegenda,
+      aoTrocar: () => { recarregarTiles(); atualizarVisibilidade(); },
+    });
   });
   mapa.on("click", consultar);
   // As classes da legenda dependem do que esta desenhado: refaz quando o mapa assenta.
@@ -328,7 +336,8 @@ function rotuloVisivel(camada) {
 }
 
 async function carregarRotulos(camada) {
-  const chave = `${nucleoAtual}|${municipioAtual?.cd_mun ?? ""}`;
+  const imovel = imovelAtual()?.id ?? null;
+  const chave = `${nucleoAtual}|${municipioAtual?.cd_mun ?? ""}|${imovel ?? ""}`;
   if (!ehPoligono(camada) || rotulosCarregados.get(camada.id) === chave) return;
   rotulosCarregados.set(camada.id, chave);
   const { data, error } = await supabase.rpc("rotulos_camada", {
@@ -336,6 +345,7 @@ async function carregarRotulos(camada) {
     campo: camada.rotulo,
     nucleo: nucleoAtual,
     municipio: municipioAtual?.cd_mun ?? null,
+    imovel,
   });
   if (error) {
     console.error(camada.id, error);
@@ -405,7 +415,44 @@ function recarregarTiles() {
     const fonte = mapa.getSource(camada.id);
     if (fonte) fonte.setTiles([urlTile(camada)]);
   }
+  const car = CAMADAS.find((c) => c.id === CAR_IMOVEL);
+  mapa.getSource(SELECAO)?.setTiles([urlTile(car, { semImovel: true })]);
 }
+
+// Escolha do imovel ---------------------------------------------------------------
+// Terceira selecao do painel: com um municipio escolhido, mostra os imoveis do CAR so pelo
+// contorno amarelo, e o clique num deles abre o nivel do imovel. A camada tematica de
+// imoveis do CAR, no grupo CAR e fundiario, continua independente.
+
+const CAR_IMOVEL = "car_imovel_2026_06";
+const SELECAO = "selecao_car";
+
+function adicionarSelecaoCar() {
+  const car = CAMADAS.find((c) => c.id === CAR_IMOVEL);
+  if (!car || !catalogo.has(CAR_IMOVEL)) return;
+  mapa.addSource(SELECAO, { type: "vector", tiles: [urlTile(car, { semImovel: true })], maxzoom: 15 });
+  const comum = { source: SELECAO, "source-layer": CAR_IMOVEL, layout: { visibility: "none" } };
+  const acima = mapa.getStyle().layers.find((l) => l.id.endsWith("__rotulo") || l.id === "rotulos_uf")?.id;
+  mapa.addLayer({ id: `${SELECAO}__clique`, type: "fill", ...comum, paint: { "fill-color": "#ffd21f", "fill-opacity": 0 } }, acima);
+  mapa.addLayer({ id: SELECAO, type: "line", ...comum, paint: { "line-color": "#ffd21f", "line-width": 1.3 } }, acima);
+}
+
+function mostrarSelecaoCar(ligar) {
+  for (const id of [SELECAO, `${SELECAO}__clique`]) {
+    if (mapa.getLayer(id)) mapa.setLayoutProperty(id, "visibility", ligar ? "visible" : "none");
+  }
+}
+
+// A escolha so vale com um municipio escolhido.
+function atualizarSelecaoCar() {
+  const caixa = $("selecao-car");
+  caixa.disabled = !municipioAtual;
+  caixa.closest("label").title = municipioAtual ? "" : "Escolha um município antes";
+  if (!municipioAtual) caixa.checked = false;
+  mostrarSelecaoCar(caixa.checked);
+}
+
+$("selecao-car").addEventListener("change", (e) => mostrarSelecaoCar(e.target.checked));
 
 function montarSeletorDeMunicipio() {
   const seletor = $("municipio");
@@ -438,6 +485,7 @@ async function escolherNucleo(numero) {
   carregarContornosMunicipios(numero);
   recarregarTiles();
   destacarMunicipio();
+  atualizarSelecaoCar();
   mapa.getSource("rotulos_uf")?.setData(dadosRotulosUF());
   await atualizarPresentes();
   atualizarVisibilidade();
@@ -455,6 +503,7 @@ async function escolherMunicipio(codigo) {
     : null;
   recarregarTiles();
   destacarMunicipio();
+  atualizarSelecaoCar();
   await atualizarPresentes();
   atualizarVisibilidade();
   const alvo = municipioAtual ?? nucleos.find((n) => n.nucleo === nucleoAtual);
@@ -723,6 +772,16 @@ document.querySelectorAll('input[name="fundo"]').forEach((radio) => {
 // Consulta -------------------------------------------------------------------
 
 function consultar(evento) {
+  // Com a escolha de imovel ligada, o clique num imovel abre o nivel do imovel. Clique no
+  // imovel ja aberto segue para a consulta dos temas.
+  if (mapa.getLayer(`${SELECAO}__clique`) && $("selecao-car").checked) {
+    const imovel = mapa.queryRenderedFeatures(evento.point, { layers: [`${SELECAO}__clique`] })
+      .find((f) => f.id != null && f.id !== imovelAtual()?.id);
+    if (imovel) {
+      abrirImovel(imovel.id);
+      return;
+    }
+  }
   const camadasNoMapa = CAMADAS.filter((c) => visivel(c) && mapa.getLayer(c.id))
     .flatMap((c) => (mapa.getLayer(`${c.id}__ponto`) ? [c.id, `${c.id}__ponto`] : [c.id]));
   const achados = mapa.queryRenderedFeatures(evento.point, { layers: camadasNoMapa });
@@ -741,15 +800,8 @@ function consultar(evento) {
     }
     html += "</table>";
     if (camada.nota) html += `<p class="sub">${camada.nota}</p>`;
-    if (camada.id === "car_imovel_2026_06" && feicao.id != null) {
-      html += `<button type="button" class="abrir-imovel" data-imovel="${feicao.id}">Abrir este imóvel</button>`;
-    }
   }
-  const popup = new maplibregl.Popup({ maxWidth: "340px" }).setLngLat(evento.lngLat).setHTML(html).addTo(mapa);
-  popup.getElement().querySelector("[data-imovel]")?.addEventListener("click", (e) => {
-    popup.remove();
-    abrirImovel(Number(e.currentTarget.dataset.imovel));
-  });
+  new maplibregl.Popup({ maxWidth: "340px" }).setLngLat(evento.lngLat).setHTML(html).addTo(mapa);
 }
 
 // PDF ------------------------------------------------------------------------

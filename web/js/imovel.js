@@ -20,13 +20,32 @@ const COR_LIMITE = "#ffd21f";
 let mapa = null;
 let supabase = null;
 let aoMudar = () => {};
+let aoTrocar = () => {};
 let atual = null;
 let cenas = [];
 let pedido = 0;
 
+// A mascara da biblioteca e uma so para todas as camadas COG de uma copia. A imagem usa a
+// faixa de 100 m e a vegetacao o limite exato do imovel, por isso a vegetacao vem de uma
+// segunda copia da biblioteca, com estado proprio, no protocolo cogveg://.
+const COPIA_VEGETACAO = "https://cdn.jsdelivr.net/npm/@geomatico/maplibre-cog-protocol@0.10.0/+esm";
+let cogVeg = null;
+
+async function segundaCopia() {
+  if (cogVeg) return cogVeg;
+  cogVeg = await import(COPIA_VEGETACAO);
+  maplibregl.addProtocol("cogveg", async (params, abort) => {
+    const resposta = await cogVeg.cogProtocol({ ...params, url: params.url.replace(/^cogveg:\/\//, "cog://") }, abort);
+    if (resposta?.data?.tiles) resposta.data.tiles = resposta.data.tiles.map((t) => t.replace(/^cog:\/\//, "cogveg://"));
+    return resposta;
+  });
+  return cogVeg;
+}
+
 export function iniciarImovel(opcoes) {
   ({ mapa, supabase } = opcoes);
   aoMudar = opcoes.aoMudar ?? aoMudar;
+  aoTrocar = opcoes.aoTrocar ?? aoTrocar;
   if (COG && !iniciarImovel.protocolo) {
     maplibregl.addProtocol("cog", COG.cogProtocol);
     iniciarImovel.protocolo = true;
@@ -108,14 +127,19 @@ function limpar() {
   }
   cenas = [];
   COG?.clearMask?.();
+  cogVeg?.clearMask?.();
 }
 
 export function fecharImovel() {
   pedido += 1;
-  if (!atual) return;
+  if (!atual) {
+    desenharCartao();
+    return;
+  }
   limpar();
   atual = null;
   desenharCartao();
+  aoTrocar();
   aoMudar();
 }
 
@@ -141,10 +165,14 @@ export async function abrirImovel(id) {
   // vale para todas as camadas COG e precisa estar antes de a fonte entrar no mapa.
   if (data.cenas.length && COG) {
     const caminhos = data.cenas.flatMap((c) => [c.arquivo, `vegetacao/${c.arquivo}`]);
-    const { data: links, error: erroLinks } = await supabase.storage.from("planet").createSignedUrls(caminhos, 3600);
+    const [{ data: links, error: erroLinks }, veg2] = await Promise.all([
+      supabase.storage.from("planet").createSignedUrls(caminhos, 3600),
+      segundaCopia().catch((erro) => { console.error(erro); return null; }),
+    ]);
     if (meu !== pedido) return;
     if (erroLinks) console.error(erroLinks);
     COG.setMask(faixa);
+    veg2?.setMask({ type: "FeatureCollection", features: [{ type: "Feature", properties: {}, geometry: data.imovel }] });
     for (const [i, c] of data.cenas.entries()) {
       const imagem = links?.[2 * i]?.signedUrl;
       const veg = links?.[2 * i + 1]?.signedUrl;
@@ -153,9 +181,9 @@ export async function abrirImovel(id) {
         mapa.addLayer({ id: CENA + c.cena, type: "raster", source: CENA + c.cena,
           layout: { visibility: mostrar.imagem ? "visible" : "none" } }, abaixo);
       }
-      if (veg) {
-        COG.setColorFunction(veg, (pixel, cor) => cor.set(pixel[0] === 1 ? RGBA_VEGETACAO : [0, 0, 0, 0]));
-        mapa.addSource(VEG + c.cena, { type: "raster", url: `cog://${veg}`, tileSize: 256 });
+      if (veg && veg2) {
+        veg2.setColorFunction(veg, (pixel, cor) => cor.set(pixel[0] === 1 ? RGBA_VEGETACAO : [0, 0, 0, 0]));
+        mapa.addSource(VEG + c.cena, { type: "raster", url: `cogveg://${veg}`, tileSize: 256 });
         mapa.addLayer({ id: VEG + c.cena, type: "raster", source: VEG + c.cena,
           layout: { visibility: mostrar.vegetacao ? "visible" : "none" } }, abaixo);
       }
@@ -176,8 +204,10 @@ export async function abrirImovel(id) {
 
   esconderPreenchimentoCar();
   const [o, s, l, n] = data.caixa;
-  mapa.fitBounds([[o, s], [l, n]], { padding: 50, duration: 900 });
+  // O quadro do imovel fica no canto superior esquerdo do mapa: o enquadramento desvia dele.
+  mapa.fitBounds([[o, s], [l, n]], { padding: { top: 40, bottom: 40, right: 40, left: 330 }, duration: 900 });
   desenharCartao();
+  aoTrocar();
   aoMudar();
 }
 
@@ -209,7 +239,7 @@ function desenharCartao(mensagem) {
   caixa.hidden = false;
   caixa.innerHTML = `
     <div class="cabeca-imovel"><b>Imóvel do CAR</b>
-      <button type="button" class="discreto" data-fechar-imovel>Fechar imóvel</button></div>
+      <button type="button" class="fechar" data-fechar-imovel title="Fechar o imóvel" aria-label="Fechar o imóvel">×</button></div>
     <table class="dados-imovel">
       <tr><td>Município</td><td>${a.municipio ?? ""}</td></tr>
       <tr><td>Área</td><td>${numero(a.area_ha, 1)} ha · ${numero(a.mod_fiscal, 1)} módulos fiscais</td></tr>
@@ -222,7 +252,7 @@ function desenharCartao(mensagem) {
       Imagem Planet, 09/2026</label>
     <label class="chave-imovel"><input type="checkbox" data-mostrar="vegetacao" ${mostrar.vegetacao ? "checked" : ""}>
       Vegetação mapeada</label>
-    <p class="sub">Recorte: imóvel com 100 m de folga.</p>`;
+    <p class="sub">Temas e vegetação recortados pelo imóvel; imagem com 100 m de folga.</p>`;
   caixa.querySelector("[data-fechar-imovel]").addEventListener("click", () => fecharImovel());
   caixa.querySelectorAll("[data-mostrar]").forEach((c) => {
     c.addEventListener("change", (e) => alternarCamada(e.target.dataset.mostrar, e.target.checked));
