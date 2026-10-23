@@ -4,6 +4,9 @@ import { CAMADAS, TEMAS, RESUMO } from "./camadas.js";
 import { exportarPDF } from "./pdf.js";
 import { prepararSimbologia, abrirSimbologia } from "./simbologia.js";
 import { itensLegenda, amostraDe, misturarComBranco, comClassesPresentes } from "./legenda.js";
+import {
+  iniciarImovel, abrirImovel, fecharImovel, imovelAtual, camadasDoImovel, fontesDoImovel, textoImovel,
+} from "./imovel.js";
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_CHAVE);
 const URL_TILE = `${SUPABASE_URL}/rest/v1/rpc/tile`;
@@ -194,6 +197,7 @@ async function abrirMapa() {
     if (ordemMudou()) aplicarOrdem();
     adicionarRotulosUF();
     atualizarVisibilidade();
+    iniciarImovel({ mapa, supabase, aoMudar: desenharLegenda });
   });
   mapa.on("click", consultar);
   // As classes da legenda dependem do que esta desenhado: refaz quando o mapa assenta.
@@ -427,6 +431,7 @@ async function carregarContornosMunicipios(numero) {
 }
 
 async function escolherNucleo(numero) {
+  fecharImovel();
   nucleoAtual = numero;
   municipioAtual = null;
   montarSeletorDeMunicipio();
@@ -444,6 +449,7 @@ async function escolherNucleo(numero) {
 // Com um municipio escolhido, todas as camadas do nucleo chegam recortadas por ele e o mapa
 // centraliza nele. Bioma e limite estadual seguem inteiros como contexto.
 async function escolherMunicipio(codigo) {
+  fecharImovel();
   municipioAtual = codigo
     ? municipios.find((m) => m.cd_mun === codigo && m.nucleo === nucleoAtual) ?? null
     : null;
@@ -597,7 +603,7 @@ function desenharLegenda() {
   if (arrastando) return;
   const caixa = $("legenda");
   const visiveis = camadasNaOrdem();
-  if (!visiveis.length) { caixa.innerHTML = ""; return; }
+  if (!visiveis.length && !imovelAtual()) { caixa.innerHTML = ""; return; }
   const padrao = ordemMudou()
     ? '<button type="button" class="ordem-padrao" data-ordem-padrao title="Voltar à ordem original das camadas">ordem padrão</button>'
     : "";
@@ -614,6 +620,14 @@ function desenharLegenda() {
         ? `<div class="grupo" data-camada="${item.camada}">${lixeira}<span>${item.texto}</span></div>`
         : `<div class="item${item.nivel ? " classe" : ""}" data-camada="${item.camada}">${lixeira}${amostraHTML(item)}<span>${item.texto}</span></div>`;
     });
+    html += "</div>";
+  }
+  // Nivel do imovel: limite e vegetacao no fim, fora da ordem arrastavel.
+  for (const camada of camadasDoImovel()) {
+    html += `<div class="camada-legenda imovel">`;
+    for (const item of itensLegenda(camada)) {
+      html += `<div class="item" data-camada="${item.camada}">${amostraHTML(item)}<span>${item.texto}</span></div>`;
+    }
     html += "</div>";
   }
   // So troca o conteudo quando mudou, para a legenda nao piscar a cada desenho do mapa.
@@ -727,8 +741,15 @@ function consultar(evento) {
     }
     html += "</table>";
     if (camada.nota) html += `<p class="sub">${camada.nota}</p>`;
+    if (camada.id === "car_imovel_2026_06" && feicao.id != null) {
+      html += `<button type="button" class="abrir-imovel" data-imovel="${feicao.id}">Abrir este imóvel</button>`;
+    }
   }
-  new maplibregl.Popup({ maxWidth: "340px" }).setLngLat(evento.lngLat).setHTML(html).addTo(mapa);
+  const popup = new maplibregl.Popup({ maxWidth: "340px" }).setLngLat(evento.lngLat).setHTML(html).addTo(mapa);
+  popup.getElement().querySelector("[data-imovel]")?.addEventListener("click", (e) => {
+    popup.remove();
+    abrirImovel(Number(e.currentTarget.dataset.imovel));
+  });
 }
 
 // PDF ------------------------------------------------------------------------
@@ -746,6 +767,7 @@ function textoRecorte() {
   const alvo = nucleos.find((n) => n.nucleo === nucleoAtual);
   let recorte = alvo ? `Núcleo ${alvo.nucleo}, ${alvo.nome}` : "Os seis núcleos em execução";
   if (municipioAtual) recorte = `${municipioAtual.nm_mun} (${municipioAtual.uf}) · ${recorte}`;
+  if (imovelAtual()) recorte = `${textoImovel()} · ${recorte}`;
   return recorte;
 }
 
@@ -835,7 +857,8 @@ $("dialogo-pdf").addEventListener("submit", async (evento) => {
       municipioAtual: municipioAtual?.cd_mun ?? null,
       contornos,
       contornosMunicipios: contornosMunicipios.get(nucleoAtual) ?? [],
-      camadas: camadasNaOrdem(),
+      camadas: [...camadasNaOrdem(), ...camadasDoImovel()],
+      fontesExtras: fontesDoImovel(),
       catalogo,
       fundo,
       base: BASE_OFICIAL,

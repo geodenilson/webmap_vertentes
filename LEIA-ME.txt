@@ -241,6 +241,35 @@ preenchimento do núcleo continua embaixo de tudo; só o contorno do núcleo aco
 ordem. A ordem fica guardada no navegador e vale também para a legenda e a lista do PDF.
 O botão "ordem padrão", no título da legenda, volta à ordem original.
 
+NÍVEL DO IMÓVEL: IMAGEM PLANET E VEGETAÇÃO, 23/10
+Quarto nível depois de núcleo e município. Com "Imóveis do CAR" ligado, o clique num imóvel
+abre um popup com "Abrir este imóvel". O mapa aproxima no imóvel e mostra a imagem Planet
+de 09/2026 e a vegetação mapeada, recortadas pelo imóvel com 100 m de folga. O cartão no
+painel traz município, área, módulos fiscais, situação, hectares e % de vegetação mapeada
+e o passivo declarado de APP, RL e uso restrito. O PDF sai com imagem, vegetação, limite e
+a Planet na fonte. O imóvel é identificado pelo fid interno; o cod_imovel continua fora.
+
+Imagem: 194 cenas PlanetScope (F:/Vertentes/Planet_Vertentes), 4 bandas de 16 bits, 5 m,
+SIRGAS 2000. _05_planet_cog.py faz a cor natural de 8 bits, com o mesmo realce em todas
+(percentis 2 e 98 de 30 cenas, gama 0,8), e grava COG em EPSG:3857, grade
+GoogleMapsCompatible, JPEG 85 com máscara, 4 reduções. 7,3 GB no total, cerca de 38 MB por
+cena. O navegador lê o COG direto, por partes, com a biblioteca maplibre-cog-protocol
+0.10.0: sem TiTiler e sem servidor extra. A mesma biblioteca recorta todas as cenas pela
+faixa do imóvel (setMask).
+Vegetação: os 13 milhões de polígonos de Vegetacao_Vertentes.gpkg não foram para o banco;
+a subida passaria de 15 horas. _07_vegetacao.py rasteriza cada cena
+(Classificacao_Vegetacao/G<n>_vegetacao.gpkg) na grade de 5 m da imagem, grava um COG de
+1 e 0 e soma a vegetação dentro de cada imóvel do CAR dos seis núcleos, um a um (imóvel
+sobreposto não perde área), com a área do pixel pela latitude. Os hectares ficam na tabela
+vertentes.imovel_vegetacao.
+Storage: bucket privado planet (sql/19). Imagens na raiz, vegetação em vegetacao/. O mapa
+pede link assinado de uma hora. _06_subir_planet.py sobe com o login de um usuário da
+equipe (e-mail e senha só no terminal) e uma permissão de escrita temporária, removida no
+fim. A subida das imagens leva de 9 a 10 horas na conexão daqui: o imóvel cuja cena ainda
+não subiu abre sem a imagem.
+Banco: sql/18 (tile com fid como id do MVT, tabela planet_cenas) e sql/20 (imovel_webmap,
+tabela imovel_vegetacao). O disco do banco foi aumentado para 32 GB em 23/10.
+
 REPOSITÓRIO E PUBLICAÇÃO
 GitHub: https://github.com/geodenilson/webmap_vertentes (ramo main). Sobe tudo, menos o
 .env e o _cache. O web/js/config.js vai junto: ele só tem o endereço do Supabase e a

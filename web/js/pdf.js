@@ -104,6 +104,11 @@ function subcamadas(map, camada) {
 function camadasPresentes(map, camadas) {
   const lista = [];
   for (const camada of camadas) {
+    // Raster (vegetacao do imovel) nao tem feicao para consultar: entra como esta.
+    if (camada.semConsulta) {
+      lista.push(camada);
+      continue;
+    }
     const ids = subcamadas(map, camada);
     const feicoes = ids.length ? map.queryRenderedFeatures({ layers: ids }) : [];
     if (feicoes.length) lista.push(comClassesPresentes(camada, feicoes));
@@ -739,7 +744,7 @@ function desenharInformacoes(doc, resumos, { titulo, recorte, base }) {
 
 export async function exportarPDF(map, {
   titulo, recorte, nucleoAtual, municipioAtual, contornos, contornosMunicipios, camadas, catalogo, fundo, base,
-  resumos = [],
+  resumos = [], fontesExtras = [],
 }) {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
@@ -762,9 +767,10 @@ export async function exportarPDF(map, {
   const fontes = [];
   for (const camada of presentes) {
     const ficha = catalogo.get(camada.id);
-    const texto = ficha?.fonte || camada.titulo;
+    const texto = ficha?.fonte || camada.fonte || camada.titulo;
     if (!fontes.includes(texto)) fontes.push(texto);
   }
+  fontes.push(...fontesExtras);
   const atribuicao = fundo === "satelite"
     ? "Fundo: Esri World Imagery."
     : "Fundo: © OpenStreetMap, OpenMapTiles, OpenFreeMap.";
