@@ -238,7 +238,7 @@ function desenharCartao(mensagem) {
   const semImagem = a.cenas.length ? "" : '<p class="sub">Sem imagem Planet neste imóvel.</p>';
   caixa.hidden = false;
   caixa.innerHTML = `
-    <div class="cabeca-imovel"><b>Imóvel do CAR</b>
+    <div class="cabeca-imovel"><b class="codigo-car">CAR: ${a.cod_imovel ?? "sem código"}</b>
       <button type="button" class="fechar" data-fechar-imovel title="Fechar o imóvel" aria-label="Fechar o imóvel">×</button></div>
     <table class="dados-imovel">
       <tr><td>Município</td><td>${a.municipio ?? ""}</td></tr>

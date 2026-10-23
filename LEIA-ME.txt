@@ -284,6 +284,11 @@ Ajustes da tarde de 23/10, pedidos pelo Denilson:
   de folga. A biblioteca de COG tem uma máscara só por cópia carregada, então a vegetação
   vem de uma segunda cópia (jsDelivr, protocolo cogveg://) com a máscara do imóvel.
 - O × dos popups de consulta ficou maior.
+- Código do CAR, decisão do Denilson em 23/10: o quadro do imóvel aberto passa a ter o
+  título "CAR: <cod_imovel>" (clique seleciona o código inteiro para copiar). O código
+  entrou só na tabela vertentes.imovel_codigo (221.246 imóveis dos seis núcleos, fid igual
+  ao da base oficial) e só sai pela função imovel_webmap, para o imóvel aberto (sql/22).
+  Continua fora dos tiles, da consulta por clique e da página de informações do PDF.
 
 REPOSITÓRIO E PUBLICAÇÃO
 GitHub: https://github.com/geodenilson/webmap_vertentes (ramo main). Sobe tudo, menos o
