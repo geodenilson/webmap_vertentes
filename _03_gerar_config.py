@@ -28,7 +28,7 @@ def main() -> None:
         f.write("// Gerado por _03_gerar_config.py a partir do .env. Nao editar a mao.\n")
         f.write(f"export const SUPABASE_URL = {json.dumps(valores['SUPABASE_URL'].rstrip('/'))};\n")
         f.write(f"export const SUPABASE_CHAVE = {json.dumps(chave)};\n")
-        f.write('export const BASE_OFICIAL = "Vertentes_nucleos_v20261004b.gpkg";\n')
+        f.write('export const BASE_OFICIAL = "Vertentes_nucleos_v20261025.gpkg";\n')
     print(destino)
 
 

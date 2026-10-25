@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Copia da base oficial para o webmap.
 
-Le Vertentes_nucleos_v20261004b.gpkg e grava _cache/vertentes_web_v20261004b.gpkg, que e o
+Le Vertentes_nucleos_v20261025.gpkg e grava _cache/vertentes_web_v20261025.gpkg, que e o
 arquivo enviado ao Supabase. A base oficial continua sendo a fonte de todo numero; esta copia
 so serve para desenhar.
 
@@ -30,8 +30,8 @@ from osgeo import gdal, ogr  # noqa: E402
 
 gdal.UseExceptions()
 
-BASE = r"F:\Vertentes\Demandas\013_Base_Nucleos_gpkg\Vertentes_nucleos_v20261004b.gpkg"
-VERSAO = "v20261004b"
+BASE = r"F:\Vertentes\Demandas\013_Base_Nucleos_gpkg\Vertentes_nucleos_v20261025.gpkg"
+VERSAO = "v20261025"
 PASTA = os.path.dirname(os.path.abspath(__file__))
 SAIDA = os.path.join(PASTA, "_cache", f"vertentes_web_{VERSAO}.gpkg")
 

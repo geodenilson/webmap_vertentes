@@ -53,6 +53,9 @@ const CNFP = [
 const FASE_QUILOMBO = [
   ["RTID", "#e9a07a"], ["DECRETO", "#d06a3a"], ["CCDRU", "#c1440e"], ["TITULO PARCIAL", "#7c2b08"],
 ];
+// Vigor da pastagem: as mesmas cores da colecao de mapas (Demandas/004).
+const VIGOR_PASTAGEM = [["1", "#a61c00"], ["2", "#fdae61"], ["3", "#2d7bb6"]];
+const ROTULO_VIGOR = { 1: "Vigor baixo", 2: "Vigor médio", 3: "Vigor alto" };
 const ANO_PRODES = [
   "interpolate", ["linear"], ["to-number", ["get", "year"], 2002],
   2002, "#f6d8a8", 2012, "#ec9a52", 2019, "#d6512a", 2025, "#8f1d10",
@@ -219,6 +222,11 @@ export const CAMADAS = [
     tipo: "fill", pintura: { "fill-color": ANO_PRODES, "fill-opacity": 0.85 },
     legenda: [["2002", "#f6d8a8"], ["2012", "#ec9a52"], ["2019", "#d6512a"], ["2025", "#8f1d10"]],
     titulo_popup: "year" },
+  { id: "pastagem_vigor_lapig_2024", titulo: "Pastagem por vigor, LAPIG 2024", tema: "pressao",
+    tipo: "fill", zoomMinimo: 7,
+    pintura: { "fill-color": categorias("cls_vigor", VIGOR_PASTAGEM), "fill-opacity": 0.75 },
+    legenda: VIGOR_PASTAGEM.map(([v, c]) => [ROTULO_VIGOR[v], c]), titulo_popup: "vigor",
+    nota: "Só o bioma Cerrado. Vigor baixo indica degradação severa." },
   { id: "asv_sinaflor", titulo: "Autorizações de supressão, Sinaflor", tema: "pressao",
     ...poligono("#f2b36b", "#a8621a", 0.6, 0.6), legenda: [["Supressão autorizada", "#f2b36b"]],
     titulo_popup: "status_aut" },
@@ -296,6 +304,7 @@ export const RESUMO = {
   prodes_cerrado_anual_v20260717: { classe: "year" },
   prodes_caatinga_anual_v20260805: { classe: "year" },
   prodes_pantanal_anual_v20260717: { classe: "year" },
+  pastagem_vigor_lapig_2024: { classe: "cls_vigor" },
   asv_sinaflor: { classe: "tipo_ativi" },
   embargos_ibama: { classe: "des_tipo_b" },
   embargos_icmbio_2026_10: { nome: "nome_uc" },
@@ -316,4 +325,5 @@ export const RESUMO = {
 export const ROTULO_CLASSE = {
   car_passivo_2026_06: { APP: "APP sem vegetação", RL: "Reserva legal sem vegetação", UR: "Uso restrito sem vegetação" },
   rodovias_dnit_snv_2026_01: { PAV: "Pavimentada", PLA: "Em pavimentação ou planejada", N_PAV: "Não pavimentada" },
+  pastagem_vigor_lapig_2024: ROTULO_VIGOR,
 };

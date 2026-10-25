@@ -290,6 +290,18 @@ Ajustes da tarde de 23/10, pedidos pelo Denilson:
   ao da base oficial) e só sai pela função imovel_webmap, para o imóvel aberto (sql/22).
   Continua fora dos tiles, da consulta por clique e da página de informações do PDF.
 
+PASTAGEM POR VIGOR DO LAPIG, 25/10
+Camada pastagem_vigor_lapig_2024 (LAPIG/UFG, 2024, só o bioma Cerrado), no tema Pressão e
+fiscalização, com as cores da coleção de mapas: vigor baixo #a61c00, médio #fdae61, alto
+#2d7bb6. Veio da edição nova da base, Vertentes_nucleos_v20261025.gpkg (demanda 013), e
+os scripts _01, _02 e _03 passaram a apontar para ela; as outras camadas no banco são as
+mesmas da v20261004b. sql/23 configura o catálogo (zoom mínimo 9 sem núcleo, vira ponto
+quando pequena, levando cls_vigor), o índice do resumo e a presença.
+São 1,68 milhão de polígonos nos nove núcleos. Tile do núcleo inteiro no zoom 6 leva 10 s
+e pesa 1,3 MB; no zoom 7, 1,8 s; no município, 1 s. Por isso a camada só é desenhada a
+partir do zoom 7 (campo zoomMinimo em camadas.js, que vira minzoom no MapLibre e evita
+pedir tile ao banco). Mais afastado, o painel avisa "Aproxime o mapa para ver esta camada".
+
 REPOSITÓRIO E PUBLICAÇÃO
 GitHub: https://github.com/geodenilson/webmap_vertentes (ramo main). Sobe tudo, menos o
 .env e o _cache. O web/js/config.js vai junto: ele só tem o endereço do Supabase e a

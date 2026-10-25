@@ -210,6 +210,7 @@ async function abrirMapa() {
   mapa.on("click", consultar);
   // As classes da legenda dependem do que esta desenhado: refaz quando o mapa assenta.
   mapa.on("idle", desenharLegenda);
+  mapa.on("zoomend", atualizarPainel);
   mapa.on("error", async (e) => {
     if (e?.error?.status !== 401) return;
     const { data } = await supabase.auth.refreshSession();
@@ -260,6 +261,8 @@ function adicionarCamada(camada) {
   mapa.addSource(camada.id, { type: "vector", tiles: [urlTile(camada)], maxzoom: 15 });
   const comum = { source: camada.id, "source-layer": camada.id };
   if (camada.filtro) comum.filter = camada.filtro;
+  // Camada muito densa (pastagem) so e desenhada, e so pede tile ao banco, a partir deste zoom.
+  if (camada.zoomMinimo) comum.minzoom = camada.zoomMinimo;
 
   mapa.addLayer({ id: camada.id, type: camada.tipo, ...comum, layout: { visibility: "none" }, paint: camada.pintura });
   if (camada.contorno) {
@@ -582,8 +585,10 @@ function atualizarPainel() {
     linha.classList.toggle("indisponivel", !livre);
     linha.querySelector("input").disabled = !livre;
     const aviso = linha.querySelector("[data-aviso]");
-    aviso.hidden = livre;
-    aviso.textContent = livre ? "" : "Escolha um núcleo para ver esta camada.";
+    const longe = livre && ligadas.has(camada.id) && camada.zoomMinimo && mapa && mapa.getZoom() < camada.zoomMinimo;
+    aviso.hidden = livre && !longe;
+    aviso.textContent = !livre ? "Escolha um núcleo para ver esta camada."
+      : longe ? "Aproxime o mapa para ver esta camada." : "";
   }
   // Tema sem nenhuma camada presente some do painel.
   for (const grupo of document.querySelectorAll("#lista-camadas details.tema")) {

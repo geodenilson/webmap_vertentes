@@ -29,9 +29,9 @@ gdal.UseExceptions()
 gdal.SetConfigOption("PG_USE_COPY", "YES")
 
 PASTA = os.path.dirname(os.path.abspath(__file__))
-VERSAO = "v20261004b"
+VERSAO = "v20261025"
 WEB = os.path.join(PASTA, "_cache", f"vertentes_web_{VERSAO}.gpkg")
-DICIONARIO = r"F:\Vertentes\Demandas\013_Base_Nucleos_gpkg\dicionario_v20261004b.csv"
+DICIONARIO = r"F:\Vertentes\Demandas\013_Base_Nucleos_gpkg\dicionario_v20261025.csv"
 BASE = f"Vertentes_nucleos_{VERSAO}.gpkg"
 ESQUEMA = "vertentes"
 
@@ -51,6 +51,7 @@ ZOOM_MINIMO = {
     "prodes_cerrado_anual_v20260717": 9,
     "prodes_caatinga_anual_v20260805": 9,
     "prodes_pantanal_anual_v20260717": 9,
+    "pastagem_vigor_lapig_2024": 9,
     "curso_dagua_ana_bho6": 9,
     "drenagem_bc250_2025": 7,
     "asv_sinaflor": 8,
