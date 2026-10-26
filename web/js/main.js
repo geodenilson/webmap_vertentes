@@ -123,8 +123,12 @@ function urlTile(camada, { semImovel = false } = {}) {
   if (municipioAtual) url += `&municipio=${municipioAtual.cd_mun}`;
   const imovel = semImovel ? null : imovelAtual();
   if (imovel) url += `&imovel=${imovel.id}`;
+  if (detalhePDF) url += "&detalhe=true";
   return url;
 }
+
+// Durante a exportacao do PDF os tiles vem com detalhe (sql/24): menos feicao vira ponto.
+let detalhePDF = false;
 
 // Mapa -----------------------------------------------------------------------
 
@@ -279,7 +283,7 @@ function adicionarCamada(camada) {
       layout: { visibility: "none" },
       paint: {
         "circle-color": camada.pintura["fill-color"],
-        "circle-radius": ["interpolate", ["linear"], ["zoom"], 6, 1.4, 10, 2.2, 14, 3],
+        "circle-radius": ["interpolate", ["linear"], ["zoom"], 6, 1, 10, 1.6, 14, 2.5],
         "circle-opacity": 0.9,
       },
     });
@@ -907,6 +911,8 @@ $("dialogo-pdf").addEventListener("submit", async (evento) => {
     }
     avisoDialogo.textContent = "Desenhando o mapa na folha. Leva alguns segundos.";
     await carregarContornosMunicipios(nucleoAtual);
+    detalhePDF = true;
+    recarregarTiles();
     await exportarPDF(mapa, {
       titulo: $("titulo-pdf").value.trim(),
       recorte: textoRecorte(),
@@ -929,6 +935,10 @@ $("dialogo-pdf").addEventListener("submit", async (evento) => {
     avisoDialogo.textContent = "Não foi possível gerar o PDF. Veja o console do navegador.";
   } finally {
     botao.disabled = false;
+    if (detalhePDF) {
+      detalhePDF = false;
+      recarregarTiles();
+    }
   }
 });
 

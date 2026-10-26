@@ -302,6 +302,19 @@ e pesa 1,3 MB; no zoom 7, 1,8 s; no município, 1 s. Por isso a camada só é de
 partir do zoom 7 (campo zoomMinimo em camadas.js, que vira minzoom no MapLibre e evita
 pedir tile ao banco). Mais afastado, o painel avisa "Aproxime o mapa para ver esta camada".
 
+DESENHO DE FEIÇÃO PEQUENA, 26/10
+Antes, o polígono com área menor que (2 px)² virava ponto. A APP, faixa fina e comprida ao
+longo do rio, aparecia como pontinho até aproximar. Quatro ajustes:
+1. sql/24: vira ponto só o que mede menos de 1,5 px de largura e de altura. A faixa
+   comprida continua polígono. Os tiles não pesaram: passivo do núcleo 2 no zoom 7 caiu de
+   241 kB para 185 kB.
+2. Passivo, PRODES anual e pastagem ganharam contorno de 0,5 px na cor da classe, para a
+   faixa estreita não sumir.
+3. PDF: durante a exportação os tiles são pedidos com detalhe=true (metade do pixel no
+   critério de ponto e na simplificação); ao fim o mapa volta ao normal. Tile 30 a 45%
+   maior, só nesse momento.
+4. Os pontos que restam ficaram menores no zoom afastado (raio de 1 a 2,5 px).
+
 REPOSITÓRIO E PUBLICAÇÃO
 GitHub: https://github.com/geodenilson/webmap_vertentes (ramo main). Sobe tudo, menos o
 .env e o _cache. O web/js/config.js vai junto: ele só tem o endereço do Supabase e a
