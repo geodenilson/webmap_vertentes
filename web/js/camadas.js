@@ -4,7 +4,10 @@
 // contexto: camada sem campo de nucleo, que nao e filtrada quando se escolhe um nucleo.
 // filtro: filtro padrao aplicado no mapa, em expressao do MapLibre.
 
+import { CAMADAS_SELECAO } from "./selecao.js";
+
 export const TEMAS = [
+  ["selecao", "Seleção de municípios"],
   ["limites", "Limites"],
   ["hidro", "Água e governança"],
   ["conservacao", "Conservação"],
@@ -97,6 +100,10 @@ export const CAMADAS = [
   { id: "vegetacao_ibge_2026", titulo: "Vegetação pretérita, IBGE", tema: "fisico",
     ...poligono("#cfe0c3", "#6f8f5d", 0.4, 0.3), legenda: [["Vegetação que existiria sem antropização", "#cfe0c3"]],
     titulo_popup: "legenda_1" },
+
+  // Selecao de municipios: um mapa por criterio, valor bruto em classes (gerado por
+  // _08_selecao_municipios.py). Fica embaixo dos temas de feicao.
+  ...CAMADAS_SELECAO,
 
   // Agua e governanca.
   { id: "regioes_hidrograficas", titulo: "Regiões hidrográficas, ANA", tema: "hidro",

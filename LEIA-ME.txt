@@ -315,6 +315,25 @@ longo do rio, aparecia como pontinho até aproximar. Quatro ajustes:
    maior, só nesse momento.
 4. Os pontos que restam ficaram menores no zoom afastado (raio de 1 a 2,5 px).
 
+GRUPO "SELEÇÃO DE MUNICÍPIOS" (29/10/2026, reunião de 27/10, pedido do Gustavo)
+Tema novo no topo do painel, com um mapa por critério da seleção de municípios: o valor
+bruto de cada um dos 158 municípios dos seis núcleos, em classes de cor por eixo
+(agropecuário em laranja, governança em roxo, ambiental em verde, biodiversidade em azul).
+São 15 critérios: pastagem degradada (vigor baixo + médio), empresas de ATER, soja,
+bovinos, propriedades, GGE, comitês, passivo do CAR, área protegida (UC e RPPN),
+vegetação nativa, áreas prioritárias ponderadas, número de PANs, área com PAN, riqueza e
+registros de plantas invasoras.
+1. Fonte: 018_metodologia_indicadores/Tabela_integrada_municipios_v20261029.xlsx.
+2. _08_selecao_municipios.py grava vertentes.selecao_municipios (geometria dos municípios
+   com todos os critérios, nome de campo legível) e uma view por critério (sel_<critério>),
+   registradas no catálogo com tema selecao e na presença. Clicar em qualquer critério
+   mostra todos os critérios do município.
+3. O mesmo script escreve web/js/selecao.js (classes e legenda). Não editar à mão: ao
+   mudar a tabela, rodar o _08 de novo. Classes: quintis dos 158 municípios; com 20% ou
+   mais de zeros, o zero é classe própria e os positivos vão em quartis; contagem pequena
+   fica em faixas inteiras.
+4. Quando a tabela final tiver nota por eixo e nota integrada, entram aqui do mesmo jeito.
+
 REPOSITÓRIO E PUBLICAÇÃO
 GitHub: https://github.com/geodenilson/webmap_vertentes (ramo main). Sobe tudo, menos o
 .env e o _cache. O web/js/config.js vai junto: ele só tem o endereço do Supabase e a
