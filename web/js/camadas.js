@@ -7,7 +7,6 @@
 import { CAMADAS_SELECAO } from "./selecao.js";
 
 export const TEMAS = [
-  ["selecao", "Seleção de municípios"],
   ["limites", "Limites"],
   ["hidro", "Água e governança"],
   ["conservacao", "Conservação"],
@@ -16,6 +15,7 @@ export const TEMAS = [
   ["pressao", "Pressão e fiscalização"],
   ["fisico", "Meio físico e vegetação"],
   ["infra", "Infraestrutura"],
+  ["selecao", "Seleção de municípios"],
 ];
 
 const outro = "#9a9488";
