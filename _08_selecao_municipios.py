@@ -57,6 +57,13 @@ CRITERIOS = [
     ("invasoras_densidade", "Biodiversidade", "Plantas invasoras: registros",
      "bio_inv_plantas_dens_100km2", "Registros de plantas invasoras (por 100 km²)", 2),
 ]
+# Unidade escrita em cada faixa da legenda.
+UNIDADE_LEGENDA = {
+    "pastagem_degradada": "ha", "empresas_ater": "empresas", "soja": "ha", "bovinos": "cabeças",
+    "propriedades": "propriedades", "governanca_gge": "pontos", "comites": "pontos", "passivo_car": "ha",
+    "area_protegida": "ha", "vegetacao_nativa": "ha", "areas_prioritarias": "ha × classe", "pan_n": "PANs",
+    "pan_area": "% do município", "invasoras_riqueza": "espécies", "invasoras_densidade": "registros por 100 km²",
+}
 # Entram so no popup, como apoio de leitura.
 EXTRAS = [
     ("amb_veg_nativa_pct", "Vegetação nativa (% do município)", 1),
@@ -201,11 +208,16 @@ def main() -> None:
             select %s, nucleo, cd_mun from vertentes.selecao_municipios
         """, (camada, camada))
         expr, legenda = classes(dados[nome], PALETAS[eixo], nome)
+        un = UNIDADE_LEGENDA[ident]
+        espaco = "" if un.startswith("%") else " "
+        legenda = [[r if r in ("Zero", "Sem dado") else f"{r}{espaco}{un}", c] for r, c in legenda]
+        outros = [[n, n, "n"] for _, n, _ in campos if n != nome]
         entradas.append({
             "id": camada, "titulo": f"{eixo} · {titulo} ({unidade(nome)})", "tema": "selecao", "tipo": "fill",
             "pintura": {"fill-color": expr, "fill-opacity": 0.8},
             "contorno": {"line-color": "#ffffff", "line-width": 0.6},
             "legenda": legenda, "titulo_popup": "nm_mun", "rotulo": "nm_mun",
+            "campos": [[nome, nome, "n"], ["nome_nucleo", "Núcleo"], ["sigla_uf", "UF"], *outros],
             "nota": f"{nome}. Classes pelos quantis dos 158 municípios dos seis núcleos.",
         })
     conn.commit()

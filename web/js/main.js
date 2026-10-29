@@ -1,6 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 import { SUPABASE_URL, SUPABASE_CHAVE, BASE_OFICIAL } from "./config.js";
-import { CAMADAS, TEMAS, RESUMO } from "./camadas.js";
+import { CAMADAS, TEMAS, RESUMO, CAMPOS_POPUP, VALOR_POPUP } from "./camadas.js";
 import { exportarPDF } from "./pdf.js";
 import { prepararSimbologia, abrirSimbologia } from "./simbologia.js";
 import { itensLegenda, amostraDe, misturarComBranco, comClassesPresentes } from "./legenda.js";
@@ -793,23 +793,30 @@ function consultar(evento) {
   }
   const camadasNoMapa = CAMADAS.filter((c) => visivel(c) && mapa.getLayer(c.id))
     .flatMap((c) => (mapa.getLayer(`${c.id}__ponto`) ? [c.id, `${c.id}__ponto`] : [c.id]));
+  // So a camada desenhada por cima no ponto clicado, com os campos escolhidos para ela.
+  // Municipio, nucleo e estado ficam sempre ligados por cima: so respondem quando nao ha
+  // outra camada no ponto.
   const achados = mapa.queryRenderedFeatures(evento.point, { layers: camadasNoMapa });
-  if (!achados.length) return;
-  const vistos = new Set();
-  let html = "";
-  for (const feicao of achados) {
-    const camada = CAMADAS.find((c) => c.id === feicao.layer.id.replace(/__ponto$/, ""));
-    if (vistos.has(camada.id) || vistos.size >= 3) continue;
-    vistos.add(camada.id);
-    const titulo = camada.titulo_popup ? feicao.properties[camada.titulo_popup] : null;
-    html += `<h3>${camada.titulo}${titulo ? ` · ${titulo}` : ""}</h3><table>`;
-    for (const [campo, valor] of Object.entries(feicao.properties)) {
-      if (valor === null || valor === "") continue;
-      html += `<tr><td>${campo}</td><td>${valor}</td></tr>`;
+  const feicao = achados.find((f) => !MOLDURA.has(f.layer.id.replace(/__ponto$/, ""))) ?? achados[0];
+  if (!feicao) return;
+  const camada = CAMADAS.find((c) => c.id === feicao.layer.id.replace(/__ponto$/, ""));
+  const props = feicao.properties;
+  const titulo = camada.titulo_popup ? props[camada.titulo_popup] : null;
+  const campos = camada.campos ?? CAMPOS_POPUP[camada.id]
+    ?? [["ha_no_nucleo", "Área no núcleo (ha)", "n"], ["km_no_nucleo", "Extensão no núcleo (km)", "n"]];
+  let linhas = "";
+  for (const [campo, rotulo, formato] of campos) {
+    let valor = props[campo];
+    if (valor === null || valor === undefined || valor === "") continue;
+    valor = VALOR_POPUP[campo]?.[valor] ?? valor;
+    if (formato === "n" && Number.isFinite(Number(valor))) {
+      valor = Number(valor).toLocaleString("pt-BR", { maximumFractionDigits: Math.abs(valor) < 10 ? 2 : 1 });
     }
-    html += "</table>";
-    if (camada.nota) html += `<p class="sub">${camada.nota}</p>`;
+    linhas += `<tr><td>${rotulo}</td><td>${valor}</td></tr>`;
   }
+  let html = `<h3>${camada.titulo}${titulo ? ` · ${titulo}` : ""}</h3>`;
+  if (linhas) html += `<table>${linhas}</table>`;
+  if (camada.nota) html += `<p class="sub">${camada.nota}</p>`;
   new maplibregl.Popup({ maxWidth: "340px" }).setLngLat(evento.lngLat).setHTML(html).addTo(mapa);
 }
 
@@ -881,6 +888,7 @@ async function buscarResumos(escolhas, aviso) {
       municipio: municipioAtual?.cd_mun ?? null,
       campo_classe: modo === "numeros" ? null : campos.classe ?? null,
       campo_nome: modo === "completo" ? campos.nome ?? null : null,
+      imovel: imovelAtual()?.id ?? null,
     };
     let { data, error } = await supabase.rpc("resumo_camada", parametros);
     if (error) ({ data, error } = await supabase.rpc("resumo_camada", parametros));

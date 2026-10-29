@@ -708,7 +708,7 @@ function cabecalhoInformacoes(doc, titulo, recorte, areaRecorte, continuacao) {
 function notaInformacoes(doc, base) {
   const nota = "Áreas e comprimentos somados feição a feição: sobreposição entre feições conta duas vezes. "
     + "Num núcleo ou nos seis, a medida é o campo ha_no_nucleo ou km_no_nucleo da base oficial "
-    + `${base}. Num município, e em bioma e estado, é medida geodésica da parte dentro do recorte, `
+    + `${base}. Num município ou num imóvel do CAR, e em bioma e estado, é medida geodésica da parte dentro do recorte, `
     + "na cópia do mapa, com diferença pequena na borda. Sem CPF, CNPJ, nome de pessoa ou código de imóvel.";
   doc.setFont("helvetica", "normal");
   doc.setFontSize(6);

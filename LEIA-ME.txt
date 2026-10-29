@@ -333,6 +333,19 @@ registros de plantas invasoras.
    mais de zeros, o zero é classe própria e os positivos vão em quartis; contagem pequena
    fica em faixas inteiras.
 4. Quando a tabela final tiver nota por eixo e nota integrada, entram aqui do mesmo jeito.
+5. A legenda traz a unidade em cada faixa (ha, cabeças, pontos, % do município...).
+
+AJUSTES DE 29/10/2026 (pedido do Denilson)
+1. PDF no nível do imóvel: sql/25 dá à função resumo_camada o parâmetro imovel. Com um
+   imóvel aberto, números, gráficos e maiores da página de informações saem da parte de
+   cada feição dentro do imóvel, e a área do recorte é a área do imóvel. Antes saíam do
+   município inteiro.
+2. Consulta (clique no mapa): mostra só a camada desenhada por cima no ponto. Município,
+   núcleo e estado, que ficam sempre ligados, só respondem quando não há outra camada.
+   Cada camada mostra uma lista curta de campos com nome legível (CAMPOS_POPUP em
+   camadas.js), números formatados e códigos traduzidos (VALOR_POPUP: AT = Ativo,
+   PAV = Pavimentada...). Número de processo, de auto, de TAD e nome de propriedade não
+   aparecem. Camada nova sem entrada em CAMPOS_POPUP mostra só a área no núcleo.
 
 REPOSITÓRIO E PUBLICAÇÃO
 GitHub: https://github.com/geodenilson/webmap_vertentes (ramo main). Sobe tudo, menos o
