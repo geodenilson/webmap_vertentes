@@ -347,6 +347,23 @@ AJUSTES DE 29/10/2026 (pedido do Denilson)
    PAV = Pavimentada...). Número de processo, de auto, de TAD e nome de propriedade não
    aparecem. Camada nova sem entrada em CAMPOS_POPUP mostra só a área no núcleo.
 
+AJUSTES DE 30/10/2026 (pedido do Denilson)
+1. PRODES em duas camadas, com Cerrado, Caatinga e Pantanal juntos e coluna bioma:
+   prodes_acumulado (desmatado até 2000, 50.345 polígonos) e prodes_anual (2002 a 2025,
+   433.318). Feitas no banco pelo sql/26 a partir das seis tabelas por bioma, que saíram
+   do catálogo e da presença mas continuam no banco. Ao subir um PRODES novo pelo _02,
+   rodar o sql/26 de novo.
+2. Consulta do CAR: o código do imóvel entra no lugar do município. Ele não vai no tile;
+   o mapa pede ao banco o código do imóvel clicado (função codigo_imovel, sql/26). Abaixo
+   do zoom 10 o tile leva só os campos de cor, então o CAR mostra só código e módulos
+   fiscais; aproximando, aparecem os demais campos.
+3. O campo que já está no título da consulta não se repete na tabela (UC, assentamentos,
+   terras indígenas, unidades de gestão, vegetação pretérita...). Autos do Ibama e CAR
+   saíram sem título de feição. Núcleos sem "Em execução".
+4. Nomes: Áreas prioritárias (Cerrado e Pantanal), Assentamentos federais e reconhecidos,
+   Terras indígenas, Territórios quilombolas, Vegetação pretérita, Geomorfologia,
+   Geologia e Pedologia, sem órgão e sem escala.
+
 REPOSITÓRIO E PUBLICAÇÃO
 GitHub: https://github.com/geodenilson/webmap_vertentes (ramo main). Sobe tudo, menos o
 .env e o _cache. O web/js/config.js vai junto: ele só tem o endereço do Supabase e a
