@@ -383,6 +383,11 @@ AJUSTES DE 30/10/2026 (pedido do Denilson)
    - PDF: subtítulo "Imóvel: código em município, área · núcleo"; quarto mapinha "No
      município" com o imóvel em destaque; a foto enquadra o imóvel deixando livre a coluna
      dos mapinhas; na página de informações, o primeiro cartão é o quadro do imóvel.
+9. PDF: mapinhas um embaixo do outro na esquerda (No Brasil, Nos núcleos, No núcleo, No
+   município), cada um só quando faz sentido, com o título dentro do quadro.
+10. sql/28: com um imóvel aberto, municípios e os mapas da seleção (sel_*) não são mais
+   recortados pelo imóvel. Recortado, o contorno do município corria sobre o limite do
+   imóvel.
 
 REPOSITÓRIO E PUBLICAÇÃO
 GitHub: https://github.com/geodenilson/webmap_vertentes (ramo main). Sobe tudo, menos o

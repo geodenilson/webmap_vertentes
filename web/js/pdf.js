@@ -14,10 +14,14 @@ const RODAPE_Y = 199;
 const FOTO = { largura: 1405, pixelRatio: 2 };
 FOTO.altura = Math.round(FOTO.largura * QUADRO.altura / QUADRO.largura);
 
-// Mapinhas de localizacao, nas medidas da colecao.
-const MAPINHA = { y: 15, largura: 40, altura: 36 };
-const MAPINHA_BRASIL_X = 11.5;
-const MAPINHA_NUCLEOS_X = MAPINHA_BRASIL_X + MAPINHA.largura + 3;
+// Mapinhas de localizacao, um embaixo do outro na esquerda, com o titulo dentro, no alto.
+// Os quatro (Brasil, nucleos, nucleo, municipio) somam cerca de 145 mm e nao chegam na escala.
+const MAPINHA = { x: 11.5, y: 11.5, largura: 40, altura: 34, separacao: 3, cabeca: 4.4 };
+const MAPINHA_BRASIL_X = MAPINHA.x;
+
+function caixaDoMapinha(i) {
+  return { x: MAPINHA.x, y: MAPINHA.y + i * (MAPINHA.altura + MAPINHA.separacao), largura: MAPINHA.largura, altura: MAPINHA.altura };
+}
 
 // Uma coluna pode ir ate 64 mm: ao lado do nucleo sempre sobra espaco. Com duas colunas ou
 // mais, a altura cai 30% e o mapa se afasta ate a legenda sair de cima do desenho.
@@ -254,6 +258,7 @@ function desenharGeometria(doc, geometria, projetar, estilo) {
   else doc.stroke();
 }
 
+// Quadro do mapinha com o titulo dentro, no alto. Devolve a area livre para o desenho.
 function moldura(doc, caixa, rotulo) {
   opacidade(doc, 0.92);
   doc.setFillColor(250, 248, 243);
@@ -265,12 +270,8 @@ function moldura(doc, caixa, rotulo) {
   doc.setFont("helvetica", "normal");
   doc.setFontSize(6.5);
   doc.setTextColor(...SUAVE);
-  opacidade(doc, 0.85);
-  doc.setFillColor(255, 255, 255);
-  const largura = doc.getTextWidth(rotulo) + 3;
-  doc.rect(caixa.x + caixa.largura / 2 - largura / 2, caixa.y - 4.2, largura, 3.6, "F");
-  opacidade(doc, 1);
-  doc.text(rotulo, caixa.x + caixa.largura / 2, caixa.y - 1.4, { align: "center" });
+  doc.text(rotulo, caixa.x + caixa.largura / 2, caixa.y + 3.2, { align: "center" });
+  return { x: caixa.x, y: caixa.y + MAPINHA.cabeca, largura: caixa.largura, altura: caixa.altura - MAPINHA.cabeca };
 }
 
 function comRecorte(doc, caixa, desenhar) {
@@ -283,11 +284,10 @@ function comRecorte(doc, caixa, desenhar) {
 }
 
 // Terceiro mapinha, so com um municipio escolhido: os municipios do nucleo, o escolhido em
-// destaque. Fica embaixo do "No Brasil", do mesmo tamanho.
-function desenharMapinhaMunicipios(doc, municipios, municipioAtual) {
+// destaque.
+function desenharMapinhaMunicipios(doc, municipios, municipioAtual, posicao) {
   if (!municipioAtual || !municipios?.length) return;
-  const caixa = { x: MAPINHA_BRASIL_X, y: MAPINHA.y + MAPINHA.altura + 7, largura: MAPINHA.largura, altura: MAPINHA.altura };
-  moldura(doc, caixa, "No núcleo");
+  const caixa = moldura(doc, caixaDoMapinha(posicao), "No núcleo");
   const noNucleo = projetor(caixa, extensao(municipios.map((m) => m.geometria), 0.05));
   comRecorte(doc, caixa, () => {
     for (const m of municipios) {
@@ -301,15 +301,12 @@ function desenharMapinhaMunicipios(doc, municipios, municipioAtual) {
   });
 }
 
-// Quarto mapinha, so com um imovel aberto: o municipio e o imovel em destaque. Fica embaixo
-// do "No núcleo". Imovel pequeno demais para se ver no mapinha ganha um circulo em volta.
-const MAPINHA_MUNICIPIO_Y = MAPINHA.y + 2 * (MAPINHA.altura + 7);
-
-function desenharMapinhaImovel(doc, municipios, municipioAtual, imovel) {
+// Quarto mapinha, so com um imovel aberto: o municipio e o imovel em destaque. Imovel
+// pequeno demais para se ver no mapinha ganha um circulo em volta.
+function desenharMapinhaImovel(doc, municipios, municipioAtual, imovel, posicao) {
   const municipio = municipios?.find((m) => m.cd_mun === municipioAtual);
   if (!imovel?.imovel || !municipio) return;
-  const caixa = { x: MAPINHA_BRASIL_X, y: MAPINHA_MUNICIPIO_Y, largura: MAPINHA.largura, altura: MAPINHA.altura };
-  moldura(doc, caixa, "No município");
+  const caixa = moldura(doc, caixaDoMapinha(posicao), "No município");
   const projetar = projetor(caixa, extensao([municipio.geometria], 0.05));
   comRecorte(doc, caixa, () => {
     desenharGeometria(doc, municipio.geometria, projetar, { preenchimento: NUCLEO_CLARO, linha: NUCLEO_LINHA, espessura: 0.2 });
@@ -343,8 +340,7 @@ function desenharMapinhas(doc, contornos, nucleoAtual) {
   const estados = contornos.estados ?? [];
   const nucleos = contornos.nucleos ?? [];
 
-  const brasil = { x: MAPINHA_BRASIL_X, y: MAPINHA.y, largura: MAPINHA.largura, altura: MAPINHA.altura };
-  moldura(doc, brasil, "No Brasil");
+  const brasil = moldura(doc, caixaDoMapinha(0), "No Brasil");
   const noBrasil = projetor(brasil, extensao(estados.map((e) => e.geometria)));
   comRecorte(doc, brasil, () => {
     for (const e of estados) {
@@ -360,8 +356,7 @@ function desenharMapinhas(doc, contornos, nucleoAtual) {
 
   if (nucleoAtual === null) return;
 
-  const caixa = { x: MAPINHA_NUCLEOS_X, y: MAPINHA.y, largura: MAPINHA.largura, altura: MAPINHA.altura };
-  moldura(doc, caixa, "Nos núcleos");
+  const caixa = moldura(doc, caixaDoMapinha(1), "Nos núcleos");
   const nosNucleos = projetor(caixa, extensao(nucleos.map((n) => n.geometria), 0.06));
   comRecorte(doc, caixa, () => {
     for (const e of estados) {
@@ -382,8 +377,8 @@ function desenharMapinhas(doc, contornos, nucleoAtual) {
 
 // Titulo e subtitulo centrados entre si. O bloco fica centrado na folha quando cabe;
 // senao, encostado logo depois dos mapinhas.
-function desenharTitulo(doc, titulo, recorte, nucleoAtual) {
-  const inicio = (nucleoAtual === null ? MAPINHA_BRASIL_X : MAPINHA_NUCLEOS_X) + MAPINHA.largura + 6;
+function desenharTitulo(doc, titulo, recorte) {
+  const inicio = MAPINHA_BRASIL_X + MAPINHA.largura + 6;
   const fim = QUADRO.x + QUADRO.largura - 24;
   const centroFolha = FOLHA.largura / 2;
 
@@ -882,9 +877,11 @@ export async function exportarPDF(map, {
   doc.rect(QUADRO.x, QUADRO.y, QUADRO.largura, QUADRO.altura);
 
   desenharMapinhas(doc, contornos, nucleoAtual);
-  desenharMapinhaMunicipios(doc, contornosMunicipios, municipioAtual);
-  desenharMapinhaImovel(doc, contornosMunicipios, municipioAtual, imovel);
-  desenharTitulo(doc, titulo || "Projeto Vertentes", recorte, nucleoAtual);
+  // Brasil e nucleos ocupam as posicoes 0 e 1 (a 1 so com um nucleo escolhido).
+  const posNucleo = nucleoAtual === null ? 1 : 2;
+  desenharMapinhaMunicipios(doc, contornosMunicipios, municipioAtual, posNucleo);
+  desenharMapinhaImovel(doc, contornosMunicipios, municipioAtual, imovel, posNucleo + 1);
+  desenharTitulo(doc, titulo || "Projeto Vertentes", recorte);
   desenharNorte(doc);
   desenharEscala(doc, centro, zoom);
   desenharLegenda(doc, colunas);
