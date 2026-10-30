@@ -370,6 +370,19 @@ AJUSTES DE 30/10/2026 (pedido do Denilson)
    mapeada" aceitam o menu de simbologia (botão direito na legenda): cor, transparência e,
    no limite, espessura. A vegetação é raster, então a cor nova refaz a fonte.
    simbologia.js agora grava só as camadas que mudou, sem apagar as outras.
+8. Nível do imóvel (sql/27 e front):
+   - Vizinho que só encosta na divisa sai do tile, do resumo e da presença: o polígono só
+     entra se a parte dentro do imóvel tiver 1% da área dele ou do imóvel, a menor. Imóveis
+     do CAR que se sobrepõem de fato continuam aparecendo (sobreposição declarada).
+   - Painel e legenda mostram só as camadas com algo no imóvel (camadas_presentes_imovel,
+     calculada na hora, cerca de 1 s).
+   - "Imóvel do CAR" e "Vegetação mapeada" entram na ordem da legenda logo abaixo de
+     Municípios, arrastáveis e com lixeira; o quadro do imóvel ganhou a chave "Limite do
+     imóvel" para religar. A ordem salva antes ganha as duas na posição padrão.
+   - Pé da legenda, na tela e no PDF: "Imagem Planet, 09/2026 R(3), G(2), B(1)".
+   - PDF: subtítulo "Imóvel: código em município, área · núcleo"; quarto mapinha "No
+     município" com o imóvel em destaque; a foto enquadra o imóvel deixando livre a coluna
+     dos mapinhas; na página de informações, o primeiro cartão é o quadro do imóvel.
 
 REPOSITÓRIO E PUBLICAÇÃO
 GitHub: https://github.com/geodenilson/webmap_vertentes (ramo main). Sobe tudo, menos o

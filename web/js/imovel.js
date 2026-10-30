@@ -73,9 +73,34 @@ const VEGETACAO = {
 };
 prepararSimbologia([LIMITE, VEGETACAO]);
 
+// Ids das camadas do imovel na ordem da legenda (a de cima primeiro), para o main.js
+// encaixa-las na ordem das outras camadas.
+export const IDS_IMOVEL = [IDS.limite, IDS.vegetacao];
+
 export function camadasDoImovel() {
   if (!atual) return [];
-  return mostrar.vegetacao && cenas.length ? [VEGETACAO, LIMITE] : [LIMITE];
+  const lista = [];
+  if (mostrar.limite) lista.push(LIMITE);
+  if (mostrar.vegetacao && cenas.length) lista.push(VEGETACAO);
+  return lista;
+}
+
+// Camadas do mapa que formam cada camada do imovel, para mover juntas na ordem.
+export function partesNoMapa(id) {
+  if (id === IDS.limite) return [IDS.faixa, IDS.limite];
+  if (id === IDS.vegetacao) return cenas.map((c) => VEG + c.cena);
+  return [];
+}
+
+// Lixeira da legenda: desliga a camada do imovel e desmarca no quadro.
+export function desligarNoImovel(id) {
+  alternarCamada(id === IDS.limite ? "limite" : "vegetacao", false);
+  desenharCartao();
+}
+
+// Referencia da imagem no pe da legenda.
+export function notaDaImagem() {
+  return atual && mostrar.imagem && cenas.length ? "Imagem Planet, 09/2026 R(3), G(2), B(1)" : null;
 }
 
 // A vegetacao vem em COG de uma banda: 1 e vegetacao, 0 fica transparente. A cor sai da
@@ -116,7 +141,7 @@ export function textoImovel() {
   return `Imóvel do CAR em ${atual.municipio}, ${numero(atual.area_ha, 1)} ha`;
 }
 
-const mostrar = { imagem: true, vegetacao: false };
+const mostrar = { imagem: true, vegetacao: false, limite: true };
 
 function numero(v, casas = 0) {
   return Number(v ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: casas, maximumFractionDigits: casas });
@@ -227,11 +252,13 @@ export async function abrirImovel(id) {
   mapa.addSource(IDS.faixa, { type: "geojson", data: faixa });
   mapa.addLayer({
     id: IDS.faixa, type: "line", source: IDS.faixa,
+    layout: { visibility: mostrar.limite ? "visible" : "none" },
     paint: { "line-color": "#ffffff", "line-width": 1.2, "line-dasharray": [3, 2], "line-opacity": 0.9 },
   }, acima);
   mapa.addSource(IDS.limite, { type: "geojson", data: { type: "Feature", properties: {}, geometry: data.imovel } });
   mapa.addLayer({
     id: IDS.limite, type: "line", source: IDS.limite,
+    layout: { visibility: mostrar.limite ? "visible" : "none" },
     paint: { ...LIMITE.pintura },
   }, acima);
 
@@ -246,7 +273,7 @@ export async function abrirImovel(id) {
 
 function alternarCamada(qual, ligar) {
   mostrar[qual] = ligar;
-  const ids = cenas.map((c) => (qual === "imagem" ? CENA : VEG) + c.cena);
+  const ids = qual === "limite" ? [IDS.faixa, IDS.limite] : cenas.map((c) => (qual === "imagem" ? CENA : VEG) + c.cena);
   for (const id of ids) {
     if (mapa.getLayer(id)) mapa.setLayoutProperty(id, "visibility", ligar ? "visible" : "none");
   }
@@ -285,6 +312,8 @@ function desenharCartao(mensagem) {
       Imagem Planet, 09/2026</label>
     <label class="chave-imovel"><input type="checkbox" data-mostrar="vegetacao" ${mostrar.vegetacao ? "checked" : ""}>
       Vegetação mapeada</label>
+    <label class="chave-imovel"><input type="checkbox" data-mostrar="limite" ${mostrar.limite ? "checked" : ""}>
+      Limite do imóvel</label>
     <p class="sub">Temas e vegetação recortados pelo imóvel; imagem com 100 m de folga.</p>`;
   caixa.querySelector("[data-fechar-imovel]").addEventListener("click", () => fecharImovel());
   caixa.querySelectorAll("[data-mostrar]").forEach((c) => {

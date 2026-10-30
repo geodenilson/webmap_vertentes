@@ -5,7 +5,8 @@ import { exportarPDF } from "./pdf.js";
 import { prepararSimbologia, abrirSimbologia } from "./simbologia.js";
 import { itensLegenda, amostraDe, misturarComBranco, comClassesPresentes } from "./legenda.js";
 import {
-  iniciarImovel, abrirImovel, fecharImovel, imovelAtual, camadasDoImovel, fontesDoImovel, textoImovel,
+  iniciarImovel, abrirImovel, fecharImovel, imovelAtual, camadasDoImovel, fontesDoImovel,
+  IDS_IMOVEL, partesNoMapa, desligarNoImovel, notaDaImagem,
 } from "./imovel.js";
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_CHAVE);
@@ -102,10 +103,15 @@ async function atualizarPresentes() {
     presentes = null;
     return;
   }
-  const { data, error } = await supabase.rpc("camadas_presentes", {
-    nucleo: nucleoAtual,
-    municipio: municipioAtual?.cd_mun ?? null,
-  });
+  // Com um imovel aberto, so o que ha dentro dele (sql/27), calculado na hora.
+  const imovel = imovelAtual();
+  const recorte = () => `${nucleoAtual}|${municipioAtual?.cd_mun ?? ""}|${imovelAtual()?.id ?? ""}`;
+  const pedido = recorte();
+  const { data, error } = imovel
+    ? await supabase.rpc("camadas_presentes_imovel", { imovel: imovel.id })
+    : await supabase.rpc("camadas_presentes", { nucleo: nucleoAtual, municipio: municipioAtual?.cd_mun ?? null });
+  // O recorte mudou enquanto o banco respondia: vale a resposta do pedido mais novo.
+  if (recorte() !== pedido) return;
   if (error) {
     console.error(error);
     presentes = null;
@@ -216,7 +222,12 @@ async function abrirMapa() {
     adicionarSelecaoCar();
     iniciarImovel({
       mapa, supabase, aoMudar: desenharLegenda,
-      aoTrocar: () => { recarregarTiles(); atualizarVisibilidade(); },
+      aoTrocar: async () => {
+        recarregarTiles();
+        aplicarOrdem();
+        await atualizarPresentes();
+        atualizarVisibilidade();
+      },
     });
   });
   mapa.on("click", consultar);
@@ -614,13 +625,23 @@ function atualizarPainel() {
 // posicao padrao entre as outras. O painel da esquerda nao muda.
 
 const CHAVE_ORDEM = "vertentes_ordem_v1";
-const ORDEM_PADRAO = CAMADAS.map((c) => c.id).reverse();
+// As camadas do imovel (limite e vegetacao) entram logo abaixo dos municipios.
+const ORDEM_PADRAO = comImovel(CAMADAS.map((c) => c.id).reverse());
 let ordemTopo = lerOrdem();
 let arrastando = null;
 
+function comImovel(lista) {
+  const sem = lista.filter((id) => !IDS_IMOVEL.includes(id));
+  const i = sem.indexOf("municipios_malha_2025");
+  sem.splice(i + 1, 0, ...IDS_IMOVEL);
+  return sem;
+}
+
 function lerOrdem() {
   try {
-    const salva = JSON.parse(localStorage.getItem(CHAVE_ORDEM) || "null");
+    let salva = JSON.parse(localStorage.getItem(CHAVE_ORDEM) || "null");
+    // Ordem salva antes de o imovel entrar na lista: o imovel vai para a posicao padrao.
+    if (Array.isArray(salva) && !IDS_IMOVEL.every((id) => salva.includes(id))) salva = comImovel(salva);
     const mesmas = Array.isArray(salva) && salva.length === ORDEM_PADRAO.length
       && ORDEM_PADRAO.every((id) => salva.includes(id));
     return mesmas ? salva : [...ORDEM_PADRAO];
@@ -633,8 +654,14 @@ function ordemMudou() {
 
 // Camadas ligadas na ordem de desenho, a de cima primeiro. Vale para legenda e PDF.
 function camadasNaOrdem() {
-  const porId = new Map(CAMADAS.map((c) => [c.id, c]));
-  return ordemTopo.map((id) => porId.get(id)).filter((c) => c && visivel(c));
+  const doImovel = camadasDoImovel();
+  const porId = new Map([...CAMADAS, ...doImovel].map((c) => [c.id, c]));
+  return ordemTopo.map((id) => porId.get(id))
+    .filter((c) => c && (doImovel.includes(c) || visivel(c)));
+}
+
+function ehDoImovel(id) {
+  return IDS_IMOVEL.includes(id);
 }
 
 // Sobe as camadas, da de baixo para a de cima, ate logo abaixo dos nomes. O preenchimento
@@ -644,6 +671,10 @@ function aplicarOrdem() {
   const ancora = mapa.getStyle().layers.find((l) => l.id.endsWith("__rotulo") || l.id === "rotulos_uf")?.id;
   const porId = new Map(CAMADAS.map((c) => [c.id, c]));
   for (const id of [...ordemTopo].reverse()) {
+    if (ehDoImovel(id)) {
+      for (const parte of partesNoMapa(id)) if (mapa.getLayer(parte)) mapa.moveLayer(parte, ancora);
+      continue;
+    }
     const camada = porId.get(id);
     if (!camada || !mapa.getLayer(id)) continue;
     const partes = camada.preenchimentoEmbaixo ? [] : [id];
@@ -675,11 +706,13 @@ function desenharLegenda() {
     : "";
   let html = `<h2>Legenda${padrao}</h2>`;
   for (const camada of visiveis) {
-    // So as classes que aparecem no desenho da tela.
+    // So as classes que aparecem no desenho da tela. A vegetacao do imovel e raster, sem
+    // feicao para consultar: entra como esta.
     const ids = mapa ? [camada.id, `${camada.id}__contorno`, `${camada.id}__ponto`].filter((id) => mapa.getLayer(id)) : [];
     const feicoes = ids.length ? mapa.queryRenderedFeatures({ layers: ids }) : [];
+    const daTela = camada.semConsulta ? camada : comClassesPresentes(camada, feicoes);
     html += `<div class="camada-legenda" draggable="true" data-bloco="${camada.id}" title="Arraste para mudar a ordem no mapa">`;
-    itensLegenda(comClassesPresentes(camada, feicoes)).forEach((item, i) => {
+    itensLegenda(daTela).forEach((item, i) => {
       // A lixeira fica na primeira linha da camada: no titulo, ou na linha unica.
       const lixeira = i === 0 ? botaoRemover(camada) : "";
       html += item.tipo === "titulo"
@@ -688,14 +721,8 @@ function desenharLegenda() {
     });
     html += "</div>";
   }
-  // Nivel do imovel: limite e vegetacao no fim, fora da ordem arrastavel.
-  for (const camada of camadasDoImovel()) {
-    html += `<div class="camada-legenda imovel">`;
-    for (const item of itensLegenda(camada)) {
-      html += `<div class="item" data-camada="${item.camada}">${amostraHTML(item)}<span>${item.texto}</span></div>`;
-    }
-    html += "</div>";
-  }
+  const nota = notaDaImagem();
+  if (nota) html += `<p class="nota-legenda">${nota}</p>`;
   // So troca o conteudo quando mudou, para a legenda nao piscar a cada desenho do mapa.
   if (caixa.innerHTML !== html) caixa.innerHTML = html;
 }
@@ -758,6 +785,10 @@ $("legenda").addEventListener("click", (e) => {
   const botao = e.target.closest("[data-remover]");
   if (!botao) return;
   const id = botao.dataset.remover;
+  if (ehDoImovel(id)) {
+    desligarNoImovel(id);
+    return;
+  }
   const caixa = document.querySelector(`.camada[data-camada="${id}"] input`);
   if (caixa) caixa.checked = false;
   alternar(id, false);
@@ -861,15 +892,20 @@ const MODOS_RESUMO = [
 
 function textoRecorte() {
   const alvo = nucleos.find((n) => n.nucleo === nucleoAtual);
-  let recorte = alvo ? `Núcleo ${alvo.nucleo}, ${alvo.nome}` : "Os seis núcleos em execução";
-  if (municipioAtual) recorte = `${municipioAtual.nm_mun} (${municipioAtual.uf}) · ${recorte}`;
-  if (imovelAtual()) recorte = `${textoImovel()} · ${recorte}`;
-  return recorte;
+  const nucleo = alvo ? `Núcleo ${alvo.nucleo}, ${alvo.nome}` : "Os seis núcleos em execução";
+  const imovel = imovelAtual();
+  if (imovel) {
+    const area = Number(imovel.area_ha ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+    const lugar = municipioAtual ? `${municipioAtual.nm_mun} (${municipioAtual.uf})` : imovel.municipio;
+    return `Imóvel: ${imovel.cod_imovel ?? "sem código"} em ${lugar}, ${area} ha · ${nucleo}`;
+  }
+  return municipioAtual ? `${municipioAtual.nm_mun} (${municipioAtual.uf}) · ${nucleo}` : nucleo;
 }
 
 function montarListaPDF() {
   const lista = $("lista-pdf");
-  const candidatas = camadasNaOrdem();
+  // Limite e vegetacao do imovel entram no quadro do imovel, nao em cartao proprio.
+  const candidatas = camadasNaOrdem().filter((c) => !ehDoImovel(c.id));
   if (!candidatas.length) {
     lista.innerHTML = '<p class="sub">Nenhuma camada ligada.</p>';
     return;
@@ -956,8 +992,12 @@ $("dialogo-pdf").addEventListener("submit", async (evento) => {
       municipioAtual: municipioAtual?.cd_mun ?? null,
       contornos,
       contornosMunicipios: contornosMunicipios.get(nucleoAtual) ?? [],
-      camadas: [...camadasNaOrdem(), ...camadasDoImovel()],
+      camadas: camadasNaOrdem(),
       fontesExtras: fontesDoImovel(),
+      notaLegenda: notaDaImagem(),
+      // No CAR o nome do municipio vem sem acento: vale o da malha do IBGE.
+      imovel: imovelAtual() && { ...imovelAtual(), municipio: municipioAtual?.nm_mun ?? imovelAtual().municipio },
+      comInformacoes,
       catalogo,
       fundo,
       base: BASE_OFICIAL,

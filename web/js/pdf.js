@@ -67,7 +67,7 @@ function esperarDesenho(map, limite = 30000) {
 
 // Redesenha o mapa no tamanho da folha, deixa preparar() conferir as camadas e ajustar o
 // zoom, tira a foto e devolve o mapa da tela como estava.
-async function fotografar(map, preparar) {
+async function fotografar(map, preparar, enquadrar = null) {
   const caixa = map.getContainer();
   const limites = map.getBounds();
   const camera = { center: map.getCenter(), zoom: map.getZoom(), bearing: map.getBearing(), pitch: map.getPitch() };
@@ -78,7 +78,8 @@ async function fotografar(map, preparar) {
   caixa.style.height = `${FOTO.altura}px`;
   map.setPixelRatio(FOTO.pixelRatio);
   map.resize();
-  map.fitBounds(limites, { duration: 0, padding: 0 });
+  if (enquadrar) map.fitBounds(enquadrar.limites, { duration: 0, padding: enquadrar.padding });
+  else map.fitBounds(limites, { duration: 0, padding: 0 });
   await esperarDesenho(map);
 
   try {
@@ -300,6 +301,43 @@ function desenharMapinhaMunicipios(doc, municipios, municipioAtual) {
   });
 }
 
+// Quarto mapinha, so com um imovel aberto: o municipio e o imovel em destaque. Fica embaixo
+// do "No núcleo". Imovel pequeno demais para se ver no mapinha ganha um circulo em volta.
+const MAPINHA_MUNICIPIO_Y = MAPINHA.y + 2 * (MAPINHA.altura + 7);
+
+function desenharMapinhaImovel(doc, municipios, municipioAtual, imovel) {
+  const municipio = municipios?.find((m) => m.cd_mun === municipioAtual);
+  if (!imovel?.imovel || !municipio) return;
+  const caixa = { x: MAPINHA_BRASIL_X, y: MAPINHA_MUNICIPIO_Y, largura: MAPINHA.largura, altura: MAPINHA.altura };
+  moldura(doc, caixa, "No município");
+  const projetar = projetor(caixa, extensao([municipio.geometria], 0.05));
+  comRecorte(doc, caixa, () => {
+    desenharGeometria(doc, municipio.geometria, projetar, { preenchimento: NUCLEO_CLARO, linha: NUCLEO_LINHA, espessura: 0.2 });
+    desenharGeometria(doc, imovel.imovel, projetar, { preenchimento: DESTAQUE, linha: [124, 43, 8], espessura: 0.15 });
+    const e = extensao([imovel.imovel]);
+    const [x1, y1] = projetar([e.oeste, e.norte]);
+    const [x2, y2] = projetar([e.leste, e.sul]);
+    if (Math.max(x2 - x1, y2 - y1) < 2.5) {
+      doc.setDrawColor(...DESTAQUE);
+      doc.setLineWidth(0.35);
+      doc.circle((x1 + x2) / 2, (y1 + y2) / 2, 2, "S");
+    }
+  });
+}
+
+// Com um imovel aberto, a foto enquadra o imovel deixando livre a coluna dos mapinhas, a
+// esquerda, e a faixa do titulo, no alto.
+function enquadramentoDoImovel(imovel) {
+  if (!imovel?.caixa) return null;
+  const k = FOTO.largura / QUADRO.largura;
+  const [o, s, l, n] = imovel.caixa;
+  const esquerda = (MAPINHA_BRASIL_X + MAPINHA.largura + 4 - QUADRO.x) * k;
+  return {
+    limites: [[o, s], [l, n]],
+    padding: { left: esquerda, right: 22 * k, top: 24 * k, bottom: 14 * k },
+  };
+}
+
 function desenharMapinhas(doc, contornos, nucleoAtual) {
   if (!contornos) return;
   const estados = contornos.estados ?? [];
@@ -469,10 +507,16 @@ function montarColunas(doc, camadas, alturaMaxima) {
 
 const SEPARACAO = 5;
 const CABECALHO = 5;
+const NOTA = { altura: 4.6, fonte: 5.8 };
+
+// Referencia no pe da legenda (a imagem Planet do imovel). Medida uma vez por folha.
+let notaLegenda = null;
 
 function caixaDaLegenda(colunas) {
-  const largura = colunas.reduce((s, c) => s + c.largura, 0) + SEPARACAO * (colunas.length - 1) + 2 * LEGENDA.folga;
-  const altura = Math.max(...colunas.map((c) => c.altura)) + CABECALHO + 2 * LEGENDA.folga;
+  const larguraColunas = colunas.reduce((s, c) => s + c.largura, 0) + SEPARACAO * (colunas.length - 1);
+  const largura = Math.max(larguraColunas, notaLegenda?.largura ?? 0) + 2 * LEGENDA.folga;
+  const altura = Math.max(...colunas.map((c) => c.altura)) + CABECALHO + 2 * LEGENDA.folga
+    + (notaLegenda ? NOTA.altura : 0);
   const direita = QUADRO.x + QUADRO.largura - 3;
   const base = QUADRO.y + QUADRO.altura - 3;
   return { x: direita - largura, y: base - altura, largura, altura };
@@ -513,6 +557,16 @@ function desenharLegenda(doc, colunas) {
       y += item.linhas.length * LEGENDA.linha;
     }
     x += coluna.largura + SEPARACAO;
+  }
+  if (notaLegenda) {
+    const yNota = caixa.y + caixa.altura - LEGENDA.folga - 0.6;
+    doc.setDrawColor(222, 216, 204);
+    doc.setLineWidth(0.15);
+    doc.line(caixa.x + LEGENDA.folga, yNota - 3.4, caixa.x + caixa.largura - LEGENDA.folga, yNota - 3.4);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(NOTA.fonte);
+    doc.setTextColor(...SUAVE);
+    doc.text(notaLegenda.texto, caixa.x + LEGENDA.folga, yNota);
   }
 }
 
@@ -690,6 +744,66 @@ function desenharCartao(doc, x, y, { camada, modo, campos, resumo: r }) {
   }
 }
 
+// Primeiro cartao no nivel do imovel: os dados do quadro do imovel na tela.
+const ROTULO_PASSIVO = { APP: "APP sem vegetação", RL: "Reserva legal sem vegetação", UR: "Uso restrito sem vegetação" };
+
+function linhasDoImovel(a) {
+  const pct = a.area_ha ? (100 * (a.veg_ha_imovel ?? 0)) / a.area_ha : 0;
+  return [
+    ["Código do imóvel", a.cod_imovel ?? "sem código"],
+    ["Município", a.municipio ?? ""],
+    ["Área", `${numero(a.area_ha, 1)} ha`],
+    ["Módulos fiscais", numero(a.mod_fiscal, 1)],
+    ["Situação", [a.status, a.condicao].filter(Boolean).join(" · ")],
+    ["Vegetação mapeada", `${numero(a.veg_ha_imovel, 1)} ha · ${numero(pct, 1)}% do imóvel`],
+    ...Object.entries(a.passivo ?? {}).map(([classe, ha]) => [ROTULO_PASSIVO[classe] ?? classe, `${numero(ha, 1)} ha`]),
+    ["Imagem", a.cenas?.length ? "Planet, PlanetScope, 09/2026" : "sem imagem Planet"],
+  ];
+}
+
+// Coluna dos rotulos na largura do maior; o valor quebra em mais linhas se precisar (o
+// codigo do CAR e longo e sem espaco).
+function medirCartaoImovel(doc, a) {
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(6.6);
+  const linhas = linhasDoImovel(a);
+  const colRotulo = Math.max(...linhas.map(([r]) => doc.getTextWidth(r))) + 3;
+  const larguraValor = INFO.largura - 6 - colRotulo;
+  const partes = linhas.map(([rotulo, valor]) => [rotulo, doc.splitTextToSize(String(valor), larguraValor)]);
+  const altura = 12 + partes.reduce((s, [, v]) => s + v.length * 3.2 + 1.2, 0);
+  return { partes, colRotulo, altura };
+}
+
+function alturaDoCartaoImovel(doc, a) {
+  return medirCartaoImovel(doc, a).altura;
+}
+
+function desenharCartaoImovel(doc, x, y, a) {
+  const largura = INFO.largura;
+  const { partes, colRotulo, altura } = medirCartaoImovel(doc, a);
+  doc.setDrawColor(216, 210, 198);
+  doc.setLineWidth(0.25);
+  doc.setFillColor(252, 251, 248);
+  doc.roundedRect(x, y, largura, altura, 1.5, 1.5, "FD");
+  doc.setDrawColor(255, 210, 31);
+  doc.setLineWidth(0.9);
+  doc.rect(x + 3, y + 3.4, 5, 3.2, "S");
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(8.6);
+  doc.setTextColor(...VERDE);
+  doc.text("Imóvel do CAR", x + 10, y + 6);
+  let cy = y + 11.5;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(6.6);
+  for (const [rotulo, valor] of partes) {
+    doc.setTextColor(...SUAVE);
+    doc.text(rotulo, x + 3, cy);
+    doc.setTextColor(...TEXTO);
+    doc.text(valor, x + 3 + colRotulo, cy);
+    cy += valor.length * 3.2 + 1.2;
+  }
+}
+
 function cabecalhoInformacoes(doc, titulo, recorte, areaRecorte, continuacao) {
   doc.setFont("helvetica", "bold");
   doc.setFontSize(13);
@@ -709,16 +823,16 @@ function notaInformacoes(doc, base) {
   const nota = "Áreas e comprimentos somados feição a feição: sobreposição entre feições conta duas vezes. "
     + "Num núcleo ou nos seis, a medida é o campo ha_no_nucleo ou km_no_nucleo da base oficial "
     + `${base}. Num município ou num imóvel do CAR, e em bioma e estado, é medida geodésica da parte dentro do recorte, `
-    + "na cópia do mapa, com diferença pequena na borda. Sem CPF, CNPJ, nome de pessoa ou código de imóvel.";
+    + "na cópia do mapa, com diferença pequena na borda. Sem CPF, CNPJ ou nome de pessoa.";
   doc.setFont("helvetica", "normal");
   doc.setFontSize(6);
   doc.setTextColor(...SUAVE);
   doc.text(doc.splitTextToSize(nota, FOLHA.largura - 2 * INFO.x), INFO.x, 197);
 }
 
-function desenharInformacoes(doc, resumos, { titulo, recorte, base }) {
-  if (!resumos?.length) return;
-  const areaRecorte = resumos.find((item) => item.resumo)?.resumo.area_recorte;
+function desenharInformacoes(doc, resumos, { titulo, recorte, base, imovel }) {
+  if (!resumos?.length && !imovel) return;
+  const areaRecorte = imovel?.area_ha ?? resumos.find((item) => item.resumo)?.resumo.area_recorte;
   let colunas = Array(INFO.colunas).fill(INFO.topo);
   const novaPagina = (continuacao) => {
     doc.addPage("a4", "landscape");
@@ -727,6 +841,10 @@ function desenharInformacoes(doc, resumos, { titulo, recorte, base }) {
     colunas = Array(INFO.colunas).fill(INFO.topo);
   };
   novaPagina(false);
+  if (imovel) {
+    desenharCartaoImovel(doc, INFO.x, colunas[0], imovel);
+    colunas[0] += alturaDoCartaoImovel(doc, imovel) + 5;
+  }
   for (const item of resumos) {
     const altura = alturaDoCartao(item.resumo, item.modo);
     let coluna = colunas.indexOf(Math.min(...colunas));
@@ -744,13 +862,19 @@ function desenharInformacoes(doc, resumos, { titulo, recorte, base }) {
 
 export async function exportarPDF(map, {
   titulo, recorte, nucleoAtual, municipioAtual, contornos, contornosMunicipios, camadas, catalogo, fundo, base,
-  resumos = [], fontesExtras = [],
+  resumos = [], fontesExtras = [], notaLegenda: nota = null, imovel = null, comInformacoes = false,
 }) {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
   const hoje = new Date();
 
-  const { imagem, centro, zoom, presentes, colunas } = await fotografar(map, (m) => arrumarLegenda(doc, m, camadas));
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(NOTA.fonte);
+  notaLegenda = nota ? { texto: nota, largura: doc.getTextWidth(nota) } : null;
+
+  const { imagem, centro, zoom, presentes, colunas } = await fotografar(
+    map, (m) => arrumarLegenda(doc, m, camadas), enquadramentoDoImovel(imovel),
+  );
 
   doc.addImage(imagem, "JPEG", QUADRO.x, QUADRO.y, QUADRO.largura, QUADRO.altura);
   doc.setDrawColor(180, 174, 162);
@@ -759,6 +883,7 @@ export async function exportarPDF(map, {
 
   desenharMapinhas(doc, contornos, nucleoAtual);
   desenharMapinhaMunicipios(doc, contornosMunicipios, municipioAtual);
+  desenharMapinhaImovel(doc, contornosMunicipios, municipioAtual, imovel);
   desenharTitulo(doc, titulo || "Projeto Vertentes", recorte, nucleoAtual);
   desenharNorte(doc);
   desenharEscala(doc, centro, zoom);
@@ -782,7 +907,9 @@ export async function exportarPDF(map, {
   doc.setTextColor(...SUAVE);
   doc.text(doc.splitTextToSize(rodape, QUADRO.largura), QUADRO.x, RODAPE_Y);
 
-  desenharInformacoes(doc, resumos, { titulo: titulo || "Projeto Vertentes", recorte, base });
+  desenharInformacoes(doc, resumos, {
+    titulo: titulo || "Projeto Vertentes", recorte, base, imovel: comInformacoes ? imovel : null,
+  });
 
   const carimbo = `${hoje.getFullYear()}${String(hoje.getMonth() + 1).padStart(2, "0")}${String(hoje.getDate()).padStart(2, "0")}`
     + `_${String(hoje.getHours()).padStart(2, "0")}${String(hoje.getMinutes()).padStart(2, "0")}`;
