@@ -385,6 +385,11 @@ AJUSTES DE 30/10/2026 (pedido do Denilson)
      dos mapinhas; na página de informações, o primeiro cartão é o quadro do imóvel.
 9. PDF: mapinhas um embaixo do outro na esquerda (No Brasil, Nos núcleos, No núcleo, No
    município), cada um só quando faz sentido, com o título dentro do quadro.
+11. PDF, layout: título "Localização" acima dos mapinhas; norte embaixo, à direita da
+   escala; a lateral direita é da legenda, um bloco preso ao canto de baixo que cresce para
+   cima até a altura do topo dos mapinhas. Quando não cabe, abre outro bloco à esquerda,
+   também alinhado pela base. O título do mapa termina antes dessa faixa, e no nível do
+   imóvel o enquadramento deixa a faixa livre.
 10. sql/28: com um imóvel aberto, municípios e os mapas da seleção (sel_*) não são mais
    recortados pelo imóvel. Recortado, o contorno do município corria sobre o limite do
    imóvel.

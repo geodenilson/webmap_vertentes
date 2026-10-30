@@ -16,18 +16,19 @@ FOTO.altura = Math.round(FOTO.largura * QUADRO.altura / QUADRO.largura);
 
 // Mapinhas de localizacao, um embaixo do outro na esquerda, com o titulo dentro, no alto.
 // Os quatro (Brasil, nucleos, nucleo, municipio) somam cerca de 145 mm e nao chegam na escala.
-const MAPINHA = { x: 11.5, y: 11.5, largura: 40, altura: 34, separacao: 3, cabeca: 4.4 };
+const MAPINHA = { x: 11.5, y: 16.5, largura: 40, altura: 34, separacao: 3, cabeca: 4.4 };
 const MAPINHA_BRASIL_X = MAPINHA.x;
 
 function caixaDoMapinha(i) {
   return { x: MAPINHA.x, y: MAPINHA.y + i * (MAPINHA.altura + MAPINHA.separacao), largura: MAPINHA.largura, altura: MAPINHA.altura };
 }
 
-// Uma coluna pode ir ate 64 mm: ao lado do nucleo sempre sobra espaco. Com duas colunas ou
-// mais, a altura cai 30% e o mapa se afasta ate a legenda sair de cima do desenho.
+// A legenda ocupa a lateral direita: um bloco preso ao canto de baixo que cresce para cima
+// ate a altura do topo dos mapinhas. Quando nao cabe, abre outro bloco a esquerda, tambem
+// alinhado pela base. Se ainda cobrir o desenho, o mapa se afasta.
 const LEGENDA = {
-  alturaMaxima: 64, reducaoComColunas: 0.7, larguraMaxima: 54,
-  folga: 3, linha: 3.4, fonte: 6.6, recuoClasse: 3, amostra: 7,
+  topo: MAPINHA.y - 5, larguraMaxima: 54,
+  folga: 3, linha: 3.4, fonte: 6.6, recuoClasse: 3, amostra: 7, entreBlocos: 2.5,
 };
 const AFASTAR = { passo: 0.2, maximo: 6 };
 
@@ -176,11 +177,13 @@ function desenharEscala(doc, centro, zoom) {
   doc.setTextColor(...TEXTO);
   doc.text("0", x, y - 1, { align: "center" });
   doc.text(rotulo, x + mm, y - 1, { align: "center" });
+  return x + mm + meioRotulo + 3;
 }
 
-function desenharNorte(doc) {
-  const cx = QUADRO.x + QUADRO.largura - 12;
-  const cy = QUADRO.y + 13;
+// Norte embaixo, logo a direita da escala: a lateral direita fica para a legenda.
+function desenharNorte(doc, depoisDaEscala) {
+  const cx = depoisDaEscala + 9;
+  const cy = QUADRO.y + QUADRO.altura - 10;
   opacidade(doc, 0.85);
   doc.setFillColor(255, 255, 255);
   doc.circle(cx, cy, 7, "F");
@@ -322,16 +325,17 @@ function desenharMapinhaImovel(doc, municipios, municipioAtual, imovel, posicao)
   });
 }
 
-// Com um imovel aberto, a foto enquadra o imovel deixando livre a coluna dos mapinhas, a
-// esquerda, e a faixa do titulo, no alto.
+// Com um imovel aberto, a foto enquadra o imovel deixando livres a coluna dos mapinhas, a
+// esquerda, a faixa da legenda, a direita, e a do titulo, no alto.
 function enquadramentoDoImovel(imovel) {
   if (!imovel?.caixa) return null;
   const k = FOTO.largura / QUADRO.largura;
   const [o, s, l, n] = imovel.caixa;
   const esquerda = (MAPINHA_BRASIL_X + MAPINHA.largura + 4 - QUADRO.x) * k;
+  const direita = (LEGENDA.larguraMaxima + 2 * LEGENDA.folga + 6) * k;
   return {
     limites: [[o, s], [l, n]],
-    padding: { left: esquerda, right: 22 * k, top: 24 * k, bottom: 14 * k },
+    padding: { left: esquerda, right: direita, top: 24 * k, bottom: 14 * k },
   };
 }
 
@@ -339,6 +343,16 @@ function desenharMapinhas(doc, contornos, nucleoAtual) {
   if (!contornos) return;
   const estados = contornos.estados ?? [];
   const nucleos = contornos.nucleos ?? [];
+
+  // Titulo geral da coluna de mapinhas, fora dos quadros.
+  opacidade(doc, 0.85);
+  doc.setFillColor(255, 255, 255);
+  doc.rect(MAPINHA.x, MAPINHA.y - 5.6, MAPINHA.largura, 4.8, "F");
+  opacidade(doc, 1);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(7.8);
+  doc.setTextColor(...VERDE);
+  doc.text("Localização", MAPINHA.x + MAPINHA.largura / 2, MAPINHA.y - 2, { align: "center" });
 
   const brasil = moldura(doc, caixaDoMapinha(0), "No Brasil");
   const noBrasil = projetor(brasil, extensao(estados.map((e) => e.geometria)));
@@ -378,8 +392,9 @@ function desenharMapinhas(doc, contornos, nucleoAtual) {
 // Titulo e subtitulo centrados entre si. O bloco fica centrado na folha quando cabe;
 // senao, encostado logo depois dos mapinhas.
 function desenharTitulo(doc, titulo, recorte) {
+  // Entre a coluna dos mapinhas e a faixa da legenda, que pode subir ate o alto.
   const inicio = MAPINHA_BRASIL_X + MAPINHA.largura + 6;
-  const fim = QUADRO.x + QUADRO.largura - 24;
+  const fim = QUADRO.x + QUADRO.largura - (LEGENDA.larguraMaxima + 2 * LEGENDA.folga + 6);
   const centroFolha = FOLHA.largura / 2;
 
   doc.setFont("helvetica", "bold");
@@ -500,44 +515,54 @@ function montarColunas(doc, camadas, alturaMaxima) {
   }));
 }
 
-const SEPARACAO = 5;
 const CABECALHO = 5;
 const NOTA = { altura: 4.6, fonte: 5.8 };
+const BASE_LEGENDA = QUADRO.y + QUADRO.altura - 3;
 
 // Referencia no pe da legenda (a imagem Planet do imovel). Medida uma vez por folha.
 let notaLegenda = null;
 
-function caixaDaLegenda(colunas) {
-  const larguraColunas = colunas.reduce((s, c) => s + c.largura, 0) + SEPARACAO * (colunas.length - 1);
-  const largura = Math.max(larguraColunas, notaLegenda?.largura ?? 0) + 2 * LEGENDA.folga;
-  const altura = Math.max(...colunas.map((c) => c.altura)) + CABECALHO + 2 * LEGENDA.folga
-    + (notaLegenda ? NOTA.altura : 0);
-  const direita = QUADRO.x + QUADRO.largura - 3;
-  const base = QUADRO.y + QUADRO.altura - 3;
-  return { x: direita - largura, y: base - altura, largura, altura };
+// Altura livre para o conteudo de uma coluna: do topo dos mapinhas ate a base, menos o
+// titulo "Legenda" e a nota, que vao no primeiro bloco.
+function alturaDaColuna() {
+  return BASE_LEGENDA - LEGENDA.topo - 2 * LEGENDA.folga - CABECALHO - (notaLegenda ? NOTA.altura : 0);
+}
+
+// Um bloco por coluna. O primeiro, com o titulo e a nota, fica no canto direito; os outros
+// vao para a esquerda. Todos alinhados pela base, crescendo para cima.
+function caixasDaLegenda(colunas) {
+  let direita = QUADRO.x + QUADRO.largura - 3;
+  return colunas.map((coluna, i) => {
+    const primeiro = i === 0;
+    const largura = Math.max(coluna.largura, primeiro ? notaLegenda?.largura ?? 0 : 0) + 2 * LEGENDA.folga;
+    const altura = coluna.altura + 2 * LEGENDA.folga
+      + (primeiro ? CABECALHO + (notaLegenda ? NOTA.altura : 0) : 0);
+    const caixa = { x: direita - largura, y: BASE_LEGENDA - altura, largura, altura, coluna, primeiro };
+    direita = caixa.x - LEGENDA.entreBlocos;
+    return caixa;
+  });
 }
 
 function desenharLegenda(doc, colunas) {
-  if (!colunas.length) return;
-  const caixa = caixaDaLegenda(colunas);
+  for (const caixa of caixasDaLegenda(colunas)) {
+    opacidade(doc, 0.92);
+    doc.setFillColor(255, 255, 255);
+    doc.rect(caixa.x, caixa.y, caixa.largura, caixa.altura, "F");
+    opacidade(doc, 1);
+    doc.setDrawColor(200, 194, 182);
+    doc.setLineWidth(0.25);
+    doc.rect(caixa.x, caixa.y, caixa.largura, caixa.altura);
 
-  opacidade(doc, 0.92);
-  doc.setFillColor(255, 255, 255);
-  doc.rect(caixa.x, caixa.y, caixa.largura, caixa.altura, "F");
-  opacidade(doc, 1);
-  doc.setDrawColor(200, 194, 182);
-  doc.setLineWidth(0.25);
-  doc.rect(caixa.x, caixa.y, caixa.largura, caixa.altura);
-
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(7.6);
-  doc.setTextColor(...VERDE);
-  doc.text("Legenda", caixa.x + LEGENDA.folga, caixa.y + LEGENDA.folga + 2.6);
-
-  let x = caixa.x + LEGENDA.folga;
-  for (const coluna of colunas) {
-    let y = caixa.y + LEGENDA.folga + CABECALHO + 2.4;
-    for (const item of coluna.itens) {
+    const x = caixa.x + LEGENDA.folga;
+    let y = caixa.y + LEGENDA.folga + 2.4;
+    if (caixa.primeiro) {
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(7.6);
+      doc.setTextColor(...VERDE);
+      doc.text("Legenda", x, caixa.y + LEGENDA.folga + 2.6);
+      y += CABECALHO;
+    }
+    for (const item of caixa.coluna.itens) {
       y += item.espacoAntes;
       doc.setFontSize(LEGENDA.fonte);
       doc.setTextColor(...TEXTO);
@@ -551,41 +576,36 @@ function desenharLegenda(doc, colunas) {
       }
       y += item.linhas.length * LEGENDA.linha;
     }
-    x += coluna.largura + SEPARACAO;
-  }
-  if (notaLegenda) {
-    const yNota = caixa.y + caixa.altura - LEGENDA.folga - 0.6;
-    doc.setDrawColor(222, 216, 204);
-    doc.setLineWidth(0.15);
-    doc.line(caixa.x + LEGENDA.folga, yNota - 3.4, caixa.x + caixa.largura - LEGENDA.folga, yNota - 3.4);
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(NOTA.fonte);
-    doc.setTextColor(...SUAVE);
-    doc.text(notaLegenda.texto, caixa.x + LEGENDA.folga, yNota);
+    if (caixa.primeiro && notaLegenda) {
+      const yNota = caixa.y + caixa.altura - LEGENDA.folga - 0.6;
+      doc.setDrawColor(222, 216, 204);
+      doc.setLineWidth(0.15);
+      doc.line(x, yNota - 3.4, caixa.x + caixa.largura - LEGENDA.folga, yNota - 3.4);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(NOTA.fonte);
+      doc.setTextColor(...SUAVE);
+      doc.text(notaLegenda.texto, x, yNota);
+    }
   }
 }
 
-// Confere as camadas no recorte da foto e arruma a legenda. Com uma coluna, nada muda.
-// Com duas ou mais, a altura cai 30% e o mapa se afasta aos poucos ate a legenda sair de
-// cima do desenho, no maximo 1,2 nivel de zoom.
+// Confere as camadas no recorte da foto e monta os blocos da legenda. Se algum bloco cobrir
+// o desenho, o mapa se afasta aos poucos, no maximo 1,2 nivel de zoom.
 async function arrumarLegenda(doc, map, camadas) {
   let presentes = camadasPresentes(map, camadas);
-  let colunas = montarColunas(doc, presentes, LEGENDA.alturaMaxima);
-  if (colunas.length <= 1) return { presentes, colunas };
-
-  const baixa = LEGENDA.alturaMaxima * LEGENDA.reducaoComColunas;
-  colunas = montarColunas(doc, presentes, baixa);
+  let colunas = montarColunas(doc, presentes, alturaDaColuna());
+  const cobre = () => caixasDaLegenda(colunas).some((c) => legendaCobreODesenho(map, c, presentes));
   // Abaixo do nivel inteiro atual o mapa pede todos os tiles de novo, e os de zoom baixo
   // das camadas pesadas levam muito tempo no banco. O afastamento para nesse piso.
   const piso = Math.floor(map.getZoom()) + 0.001;
-  for (let i = 0; i < AFASTAR.maximo && legendaCobreODesenho(map, caixaDaLegenda(colunas), presentes); i += 1) {
+  for (let i = 0; i < AFASTAR.maximo && cobre(); i += 1) {
     const zoom = Math.max(piso, map.getZoom() - AFASTAR.passo);
     if (zoom >= map.getZoom()) break;
     map.setZoom(zoom);
     if (!(await esperarDesenho(map, 15000))) break;
   }
   presentes = camadasPresentes(map, camadas);
-  colunas = montarColunas(doc, presentes, baixa);
+  colunas = montarColunas(doc, presentes, alturaDaColuna());
   return { presentes, colunas };
 }
 
@@ -882,8 +902,7 @@ export async function exportarPDF(map, {
   desenharMapinhaMunicipios(doc, contornosMunicipios, municipioAtual, posNucleo);
   desenharMapinhaImovel(doc, contornosMunicipios, municipioAtual, imovel, posNucleo + 1);
   desenharTitulo(doc, titulo || "Projeto Vertentes", recorte);
-  desenharNorte(doc);
-  desenharEscala(doc, centro, zoom);
+  desenharNorte(doc, desenharEscala(doc, centro, zoom));
   desenharLegenda(doc, colunas);
 
   const fontes = [];
