@@ -169,8 +169,10 @@ export function abrirSimbologia(evento, camada, mapa, camadas, aoMudar) {
   caixa.hidden = false;
   const { innerWidth: w, innerHeight: h } = window;
   const r = caixa.getBoundingClientRect();
-  caixa.style.left = `${Math.min(evento.clientX, w - r.width - 8)}px`;
-  caixa.style.top = `${Math.min(evento.clientY, h - r.height - 8)}px`;
+  // Abre acima do clique: a legenda fica embaixo, e abrindo para baixo a janela era cortada
+  // pelo fim da pagina. Sem espaco acima, encosta no topo.
+  caixa.style.left = `${Math.max(8, Math.min(evento.clientX, w - r.width - 8))}px`;
+  caixa.style.top = `${Math.max(8, Math.min(evento.clientY - r.height - 8, h - r.height - 8))}px`;
 }
 
 document.addEventListener("keydown", (e) => { if (e.key === "Escape") fechar(); });
