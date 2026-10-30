@@ -360,6 +360,13 @@ AJUSTES DE 30/10/2026 (pedido do Denilson)
 3. Título da consulta só com o nome da camada; o nome da feição (unidade, assentamento,
    terra indígena, município da seleção...) é o primeiro campo da tabela. Núcleos sem
    "Em execução".
+5. Legenda 19 px mais alta, fora da atribuição do fundo, que abre fechada (o "i" mostra).
+6. Consulta mais larga (até 480 px, encolhe com pouco conteúdo): rótulo numa linha só e
+   valor que quebra até em código longo sem espaço.
+7. Imóvel aberto: vegetação mapeada desligada por padrão. "Imóvel do CAR" e "Vegetação
+   mapeada" aceitam o menu de simbologia (botão direito na legenda): cor, transparência e,
+   no limite, espessura. A vegetação é raster, então a cor nova refaz a fonte.
+   simbologia.js agora grava só as camadas que mudou, sem apagar as outras.
 4. Nomes: Áreas prioritárias (Cerrado e Pantanal), Assentamentos federais e reconhecidos,
    Terras indígenas, Territórios quilombolas, Vegetação pretérita, Geomorfologia,
    Geologia e Pedologia, sem órgão e sem escala.

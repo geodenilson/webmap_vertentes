@@ -187,7 +187,15 @@ async function abrirMapa() {
   mapa.addControl(new maplibregl.NavigationControl({ visualizePitch: false }), "top-right");
   mapa.addControl(new maplibregl.ScaleControl({ unit: "metric" }), "bottom-left");
   window.mapaVertentes = mapa;
+  // A atribuicao do fundo comeca fechada; o "i" abre.
+  const fecharAtribuicao = () => {
+    const atrib = document.querySelector(".maplibregl-ctrl-attrib");
+    atrib?.classList.remove("maplibregl-compact-show");
+    atrib?.removeAttribute("open");
+  };
+  mapa.once("idle", fecharAtribuicao);
   mapa.on("load", () => {
+    fecharAtribuicao();
     adicionarSatelite();
     for (const camada of CAMADAS) {
       if (catalogo.has(camada.id)) adicionarCamada(camada);
@@ -768,7 +776,12 @@ $("legenda").addEventListener("contextmenu", (e) => {
   const alvo = e.target.closest("[data-camada]");
   if (!alvo) return;
   const camada = CAMADAS.find((c) => c.id === alvo.dataset.camada);
-  if (camada) abrirSimbologia(e, camada, mapa, CAMADAS, aoMudarSimbologia);
+  if (camada) {
+    abrirSimbologia(e, camada, mapa, CAMADAS, aoMudarSimbologia);
+    return;
+  }
+  const doImovel = camadasDoImovel().find((c) => c.id === alvo.dataset.camada);
+  if (doImovel) abrirSimbologia(e, doImovel, mapa, camadasDoImovel(), aoMudarSimbologia);
 });
 
 document.querySelectorAll('input[name="fundo"]').forEach((radio) => {
@@ -826,7 +839,7 @@ function consultar(evento) {
   let html = `<h3>${camada.titulo}</h3>`;
   if (linhas) html += `<table>${linhas}</table>`;
   if (camada.nota) html += `<p class="sub">${camada.nota}</p>`;
-  new maplibregl.Popup({ maxWidth: "340px" }).setLngLat(evento.lngLat).setHTML(html).addTo(mapa);
+  new maplibregl.Popup({ maxWidth: "480px" }).setLngLat(evento.lngLat).setHTML(html).addTo(mapa);
   if (pedeCodigo) {
     supabase.rpc("codigo_imovel", { id: feicao.id }).then(({ data, error }) => {
       const celula = document.getElementById("popup-cod-imovel");

@@ -115,7 +115,7 @@ button.discreto { background: none; color: var(--suave); padding: 4px 6px; font-
 #legenda {
   position: fixed;
   right: 12px;
-  bottom: 28px;
+  bottom: 47px;
   max-width: 280px;
   max-height: 45vh;
   overflow-y: auto;
@@ -266,8 +266,10 @@ select {
 #lista-pdf select { padding: 4px 6px; font-size: 12px; }
 #dialogo-pdf .acoes { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
 
-.maplibregl-popup-content { font-size: 12px; max-height: 260px; overflow-y: auto; }
+.maplibregl-popup-content { font-size: 12px; max-height: 320px; overflow-y: auto; }
 .maplibregl-popup-content table { border-collapse: collapse; }
-.maplibregl-popup-content td { padding: 1px 6px 1px 0; vertical-align: top; }
-.maplibregl-popup-content td:first-child { color: var(--suave); }
+.maplibregl-popup-content td { padding: 1px 10px 1px 0; vertical-align: top; }
+/* Rotulo numa linha so; o valor quebra onde precisar, ate um codigo longo sem espaco. */
+.maplibregl-popup-content td:first-child { color: var(--suave); white-space: nowrap; }
+.maplibregl-popup-content td:last-child { min-width: 120px; overflow-wrap: anywhere; }
 .maplibregl-popup-content h3 { margin: 0 0 4px; font-size: 12px; color: var(--verde); }

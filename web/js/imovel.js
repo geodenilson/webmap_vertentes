@@ -4,6 +4,8 @@
 // maplibre-cog-protocol; a mascara da faixa recorta todas as cenas de uma vez.
 // O banco devolve tudo numa chamada: public.imovel_webmap(id), sql/18.
 
+import { prepararSimbologia } from "./simbologia.js";
+
 const COG = window.MaplibreCOGProtocol;
 const CENA = "imovel_cena_";
 const VEG = "imovel_vegetacao_";
@@ -13,8 +15,6 @@ const IDS = {
   limite: "imovel_limite",
 };
 const COR_VEGETACAO = "#1e8f3a";
-// A vegetacao vem em COG de uma banda: 1 e vegetacao, 0 fica transparente.
-const RGBA_VEGETACAO = [30, 143, 58, 120];
 const COR_LIMITE = "#ffd21f";
 
 let mapa = null;
@@ -56,23 +56,55 @@ export function imovelAtual() {
   return atual;
 }
 
-// Camadas do imovel no formato de camadas.js, para a legenda da tela e a do PDF.
+// Camadas do imovel no formato de camadas.js, para a legenda da tela, a do PDF e o menu de
+// simbologia (botao direito na legenda). Sao sempre os mesmos objetos: a simbologia mudada
+// pelo usuario fica neles e no navegador, como nas outras camadas.
+const LIMITE = {
+  id: IDS.limite, titulo: "Imóvel do CAR", tipo: "line", geometria: "POLYGON",
+  pintura: { "line-color": COR_LIMITE, "line-width": 3 },
+  legenda: [["Limite do imóvel", COR_LIMITE]], fonte: "SICAR, imóvel do CAR, junho de 2026",
+};
+const VEGETACAO = {
+  id: IDS.vegetacao, titulo: "Vegetação mapeada", tipo: "fill", geometria: "POLYGON", semConsulta: true,
+  pintura: { "fill-color": COR_VEGETACAO, "fill-opacity": 0.47 },
+  legenda: [["Vegetação mapeada", COR_VEGETACAO]],
+  fonte: "Projeto Vertentes, vegetação mapeada sobre PlanetScope 09/2026",
+  aplicar: () => recolorirVegetacao(),
+};
+prepararSimbologia([LIMITE, VEGETACAO]);
+
 export function camadasDoImovel() {
   if (!atual) return [];
-  const lista = [{
-    id: IDS.limite, titulo: "Imóvel do CAR", tipo: "line", geometria: "POLYGON",
-    pintura: { "line-color": COR_LIMITE, "line-width": 3 },
-    legenda: [["Limite do imóvel", COR_LIMITE]], fonte: "SICAR, imóvel do CAR, junho de 2026",
-  }];
-  if (mostrar.vegetacao && cenas.length) {
-    lista.unshift({
-      id: IDS.vegetacao, titulo: "Vegetação mapeada", tipo: "fill", geometria: "POLYGON", semConsulta: true,
-      pintura: { "fill-color": COR_VEGETACAO, "fill-opacity": 0.47 },
-      legenda: [["Vegetação mapeada", COR_VEGETACAO]],
-      fonte: "Projeto Vertentes, vegetação mapeada sobre PlanetScope 09/2026",
-    });
+  return mostrar.vegetacao && cenas.length ? [VEGETACAO, LIMITE] : [LIMITE];
+}
+
+// A vegetacao vem em COG de uma banda: 1 e vegetacao, 0 fica transparente. A cor sai da
+// simbologia da camada.
+function rgbaVegetacao() {
+  const hex = VEGETACAO.pintura["fill-color"].replace("#", "");
+  const [r, g, b] = [0, 2, 4].map((i) => parseInt(hex.slice(i, i + 2), 16));
+  return [r, g, b, Math.round(255 * (VEGETACAO.pintura["fill-opacity"] ?? 1))];
+}
+
+function pintarVegetacao(link) {
+  const rgba = rgbaVegetacao();
+  cogVeg.setColorFunction(link, (pixel, cor) => cor.set(pixel[0] === 1 ? rgba : [0, 0, 0, 0]));
+}
+
+// Cor nova: a funcao de cor vale para os tiles lidos depois, entao a fonte e refeita.
+function recolorirVegetacao() {
+  if (!cogVeg) return;
+  for (const c of cenas) {
+    const id = VEG + c.cena;
+    if (!c.linkVegetacao || !mapa.getLayer(id)) continue;
+    pintarVegetacao(c.linkVegetacao);
+    const antes = mapa.getStyle().layers[mapa.getStyle().layers.findIndex((l) => l.id === id) + 1]?.id;
+    mapa.removeLayer(id);
+    mapa.removeSource(id);
+    mapa.addSource(id, { type: "raster", url: `cogveg://${c.linkVegetacao}`, tileSize: 256 });
+    mapa.addLayer({ id, type: "raster", source: id,
+      layout: { visibility: mostrar.vegetacao ? "visible" : "none" } }, antes);
   }
-  return lista;
 }
 
 export function fontesDoImovel() {
@@ -84,7 +116,7 @@ export function textoImovel() {
   return `Imóvel do CAR em ${atual.municipio}, ${numero(atual.area_ha, 1)} ha`;
 }
 
-const mostrar = { imagem: true, vegetacao: true };
+const mostrar = { imagem: true, vegetacao: false };
 
 function numero(v, casas = 0) {
   return Number(v ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: casas, maximumFractionDigits: casas });
@@ -182,7 +214,8 @@ export async function abrirImovel(id) {
           layout: { visibility: mostrar.imagem ? "visible" : "none" } }, abaixo);
       }
       if (veg && veg2) {
-        veg2.setColorFunction(veg, (pixel, cor) => cor.set(pixel[0] === 1 ? RGBA_VEGETACAO : [0, 0, 0, 0]));
+        c.linkVegetacao = veg;
+        pintarVegetacao(veg);
         mapa.addSource(VEG + c.cena, { type: "raster", url: `cogveg://${veg}`, tileSize: 256 });
         mapa.addLayer({ id: VEG + c.cena, type: "raster", source: VEG + c.cena,
           layout: { visibility: mostrar.vegetacao ? "visible" : "none" } }, abaixo);
@@ -199,7 +232,7 @@ export async function abrirImovel(id) {
   mapa.addSource(IDS.limite, { type: "geojson", data: { type: "Feature", properties: {}, geometry: data.imovel } });
   mapa.addLayer({
     id: IDS.limite, type: "line", source: IDS.limite,
-    paint: { "line-color": COR_LIMITE, "line-width": 3 },
+    paint: { ...LIMITE.pintura },
   }, acima);
 
   esconderPreenchimentoCar();

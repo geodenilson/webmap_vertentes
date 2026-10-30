@@ -30,12 +30,15 @@ export function prepararSimbologia(camadas) {
   }
 }
 
+// Grava so as camadas recebidas, sem apagar o que outras listas (as do imovel) ja salvaram.
 function salvar(camadas) {
-  const mudadas = {};
+  const mudadas = ler();
   for (const c of camadas) {
     const atual = JSON.stringify({ pintura: c.pintura, contorno: c.contorno ?? null, legenda: c.legenda });
     if (atual !== JSON.stringify(c.padrao)) {
       mudadas[c.id] = { pintura: c.pintura, contorno: c.contorno ?? null, legenda: c.legenda };
+    } else {
+      delete mudadas[c.id];
     }
   }
   localStorage.setItem(CHAVE, JSON.stringify(mudadas));
@@ -51,7 +54,14 @@ function trocarCor(valor, antiga, nova) {
 }
 
 function aplicar(mapa, camada) {
+  // Camada que nao e uma camada comum do mapa (a vegetacao do imovel e raster) traz o
+  // proprio jeito de aplicar.
+  if (camada.aplicar) {
+    camada.aplicar();
+    return;
+  }
   for (const [prop, valor] of Object.entries(camada.pintura)) {
+    if (!mapa.getLayer(camada.id)) break;
     mapa.setPaintProperty(camada.id, prop, valor);
   }
   if (camada.contorno && mapa.getLayer(`${camada.id}__contorno`)) {
