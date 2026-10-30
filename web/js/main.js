@@ -801,14 +801,16 @@ function consultar(evento) {
   if (!feicao) return;
   const camada = CAMADAS.find((c) => c.id === feicao.layer.id.replace(/__ponto$/, ""));
   const props = feicao.properties;
-  const titulo = camada.titulo_popup ? props[camada.titulo_popup] : null;
-  const campos = camada.campos ?? CAMPOS_POPUP[camada.id]
+  let campos = camada.campos ?? CAMPOS_POPUP[camada.id]
     ?? [["ha_no_nucleo", "Área no núcleo (ha)", "n"], ["km_no_nucleo", "Extensão no núcleo (km)", "n"]];
+  // O titulo e so o nome da camada; o nome da feicao vai como primeiro campo da tabela.
+  if (camada.titulo_popup && !campos.some(([c]) => c === camada.titulo_popup)) {
+    campos = [[camada.titulo_popup, "Nome"], ...campos];
+  }
   // O codigo do imovel do CAR nao vem no tile: entra depois, pedido ao banco.
   const pedeCodigo = camada.id === CAR_IMOVEL && feicao.id != null;
   let linhas = "";
   for (const [campo, rotulo, formato] of campos) {
-    if (campo === camada.titulo_popup) continue;
     if (campo === "cod_imovel" && pedeCodigo) {
       linhas += `<tr><td>${rotulo}</td><td id="popup-cod-imovel">…</td></tr>`;
       continue;
@@ -821,7 +823,7 @@ function consultar(evento) {
     }
     linhas += `<tr><td>${rotulo}</td><td>${valor}</td></tr>`;
   }
-  let html = `<h3>${camada.titulo}${titulo ? ` · ${titulo}` : ""}</h3>`;
+  let html = `<h3>${camada.titulo}</h3>`;
   if (linhas) html += `<table>${linhas}</table>`;
   if (camada.nota) html += `<p class="sub">${camada.nota}</p>`;
   new maplibregl.Popup({ maxWidth: "340px" }).setLngLat(evento.lngLat).setHTML(html).addTo(mapa);

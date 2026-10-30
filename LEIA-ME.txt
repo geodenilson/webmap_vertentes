@@ -357,9 +357,9 @@ AJUSTES DE 30/10/2026 (pedido do Denilson)
    o mapa pede ao banco o código do imóvel clicado (função codigo_imovel, sql/26). Abaixo
    do zoom 10 o tile leva só os campos de cor, então o CAR mostra só código e módulos
    fiscais; aproximando, aparecem os demais campos.
-3. O campo que já está no título da consulta não se repete na tabela (UC, assentamentos,
-   terras indígenas, unidades de gestão, vegetação pretérita...). Autos do Ibama e CAR
-   saíram sem título de feição. Núcleos sem "Em execução".
+3. Título da consulta só com o nome da camada; o nome da feição (unidade, assentamento,
+   terra indígena, município da seleção...) é o primeiro campo da tabela. Núcleos sem
+   "Em execução".
 4. Nomes: Áreas prioritárias (Cerrado e Pantanal), Assentamentos federais e reconhecidos,
    Terras indígenas, Territórios quilombolas, Vegetação pretérita, Geomorfologia,
    Geologia e Pedologia, sem órgão e sem escala.

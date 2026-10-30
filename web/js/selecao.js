@@ -61,6 +61,10 @@ export const CAMADAS_SELECAO = [
     "rotulo": "nm_mun",
     "campos": [
       [
+        "nm_mun",
+        "Município"
+      ],
+      [
         "Registros de plantas invasoras (por 100 km²)",
         "Registros de plantas invasoras (por 100 km²)",
         "n"
@@ -216,6 +220,10 @@ export const CAMADAS_SELECAO = [
     "rotulo": "nm_mun",
     "campos": [
       [
+        "nm_mun",
+        "Município"
+      ],
+      [
         "Plantas invasoras (espécies)",
         "Plantas invasoras (espécies)",
         "n"
@@ -365,6 +373,10 @@ export const CAMADAS_SELECAO = [
     "rotulo": "nm_mun",
     "campos": [
       [
+        "nm_mun",
+        "Município"
+      ],
+      [
         "Área com PAN (%)",
         "Área com PAN (%)",
         "n"
@@ -513,6 +525,10 @@ export const CAMADAS_SELECAO = [
     "titulo_popup": "nm_mun",
     "rotulo": "nm_mun",
     "campos": [
+      [
+        "nm_mun",
+        "Município"
+      ],
       [
         "PANs (nº)",
         "PANs (nº)",
@@ -669,6 +685,10 @@ export const CAMADAS_SELECAO = [
     "rotulo": "nm_mun",
     "campos": [
       [
+        "nm_mun",
+        "Município"
+      ],
+      [
         "Áreas prioritárias, ha x classe",
         "Áreas prioritárias, ha x classe",
         "n"
@@ -824,6 +844,10 @@ export const CAMADAS_SELECAO = [
     "rotulo": "nm_mun",
     "campos": [
       [
+        "nm_mun",
+        "Município"
+      ],
+      [
         "Vegetação nativa (ha)",
         "Vegetação nativa (ha)",
         "n"
@@ -978,6 +1002,10 @@ export const CAMADAS_SELECAO = [
     "titulo_popup": "nm_mun",
     "rotulo": "nm_mun",
     "campos": [
+      [
+        "nm_mun",
+        "Município"
+      ],
       [
         "Área protegida, UC e RPPN (ha)",
         "Área protegida, UC e RPPN (ha)",
@@ -1138,6 +1166,10 @@ export const CAMADAS_SELECAO = [
     "rotulo": "nm_mun",
     "campos": [
       [
+        "nm_mun",
+        "Município"
+      ],
+      [
         "Passivo no CAR (ha)",
         "Passivo no CAR (ha)",
         "n"
@@ -1296,6 +1328,10 @@ export const CAMADAS_SELECAO = [
     "titulo_popup": "nm_mun",
     "rotulo": "nm_mun",
     "campos": [
+      [
+        "nm_mun",
+        "Município"
+      ],
       [
         "Comitês de bacia (pontos)",
         "Comitês de bacia (pontos)",
@@ -1456,6 +1492,10 @@ export const CAMADAS_SELECAO = [
     "rotulo": "nm_mun",
     "campos": [
       [
+        "nm_mun",
+        "Município"
+      ],
+      [
         "Governança GGE (pontos)",
         "Governança GGE (pontos)",
         "n"
@@ -1610,6 +1650,10 @@ export const CAMADAS_SELECAO = [
     "titulo_popup": "nm_mun",
     "rotulo": "nm_mun",
     "campos": [
+      [
+        "nm_mun",
+        "Município"
+      ],
       [
         "Propriedades (nº)",
         "Propriedades (nº)",
@@ -1766,6 +1810,10 @@ export const CAMADAS_SELECAO = [
     "rotulo": "nm_mun",
     "campos": [
       [
+        "nm_mun",
+        "Município"
+      ],
+      [
         "Bovinos (cabeças)",
         "Bovinos (cabeças)",
         "n"
@@ -1920,6 +1968,10 @@ export const CAMADAS_SELECAO = [
     "titulo_popup": "nm_mun",
     "rotulo": "nm_mun",
     "campos": [
+      [
+        "nm_mun",
+        "Município"
+      ],
       [
         "Soja (ha)",
         "Soja (ha)",
@@ -2076,6 +2128,10 @@ export const CAMADAS_SELECAO = [
     "rotulo": "nm_mun",
     "campos": [
       [
+        "nm_mun",
+        "Município"
+      ],
+      [
         "Empresas de ATER (nº)",
         "Empresas de ATER (nº)",
         "n"
@@ -2230,6 +2286,10 @@ export const CAMADAS_SELECAO = [
     "titulo_popup": "nm_mun",
     "rotulo": "nm_mun",
     "campos": [
+      [
+        "nm_mun",
+        "Município"
+      ],
       [
         "Pastagem vigor baixo + médio (ha)",
         "Pastagem vigor baixo + médio (ha)",

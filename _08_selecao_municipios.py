@@ -217,7 +217,7 @@ def main() -> None:
             "pintura": {"fill-color": expr, "fill-opacity": 0.8},
             "contorno": {"line-color": "#ffffff", "line-width": 0.6},
             "legenda": legenda, "titulo_popup": "nm_mun", "rotulo": "nm_mun",
-            "campos": [[nome, nome, "n"], ["nome_nucleo", "Núcleo"], ["sigla_uf", "UF"], *outros],
+            "campos": [["nm_mun", "Município"], [nome, nome, "n"], ["nome_nucleo", "Núcleo"], ["sigla_uf", "UF"], *outros],
             "nota": f"{nome}. Classes pelos quantis dos 158 municípios dos seis núcleos.",
         })
     conn.commit()
