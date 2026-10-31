@@ -450,7 +450,7 @@ function recarregarTiles() {
 // contorno amarelo, e o clique num deles abre o nivel do imovel. A camada tematica de
 // imoveis do CAR, no grupo CAR e fundiario, continua independente.
 
-const CAR_IMOVEL = "car_imovel_2026_06";
+const CAR_IMOVEL = "car_imovel_2026_10";
 const SELECAO = "selecao_car";
 
 // Os contornos da escolha entram na legenda e no PDF como "Limite do CAR", ao lado do
@@ -458,7 +458,7 @@ const SELECAO = "selecao_car";
 const LIMITES_CAR = {
   id: SELECAO, titulo: "Limite do CAR", tipo: "line", geometria: "POLYGON",
   pintura: { "line-color": "#ffd21f", "line-width": 1.3 },
-  legenda: [["Limite do CAR", "#ffd21f"]], fonte: "SICAR, imóveis do CAR, junho de 2026",
+  legenda: [["Limite do CAR", "#ffd21f"]], fonte: "SICAR, imóveis do CAR, outubro de 2026",
 };
 prepararSimbologia([LIMITES_CAR]);
 

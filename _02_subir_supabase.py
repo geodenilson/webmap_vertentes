@@ -29,9 +29,9 @@ gdal.UseExceptions()
 gdal.SetConfigOption("PG_USE_COPY", "YES")
 
 PASTA = os.path.dirname(os.path.abspath(__file__))
-VERSAO = "v20261025"
+VERSAO = "v20261031"
 WEB = os.path.join(PASTA, "_cache", f"vertentes_web_{VERSAO}.gpkg")
-DICIONARIO = r"F:\Vertentes\Demandas\013_Base_Nucleos_gpkg\dicionario_v20261025.csv"
+DICIONARIO = r"F:\Vertentes\Demandas\013_Base_Nucleos_gpkg\dicionario_v20261031.csv"
 BASE = f"Vertentes_nucleos_{VERSAO}.gpkg"
 ESQUEMA = "vertentes"
 
@@ -42,7 +42,11 @@ FORA_DO_MAPA = {"curso_dagua_ana_bho6", "pan_abrangencia_icmbio_2024_05"}
 # Abaixo deste zoom a camada nao e pedida ao banco. Sao as de centenas de milhares de
 # poligonos, que so se leem no recorte de um municipio.
 ZOOM_MINIMO = {
-    "car_imovel_2026_06": 11,
+    "car_imovel_2026_10": 11,
+    "car_app_2026_10": 11,
+    "car_reserva_legal_2026_10": 11,
+    "car_uso_restrito_2026_10": 11,
+    "car_vegetacao_nativa_2026_10": 11,
     "car_passivo_2026_06": 11,
     "sigef_privado": 11,
     "sigef_publico": 10,
@@ -57,7 +61,9 @@ ZOOM_MINIMO = {
     "asv_sinaflor": 8,
 }
 TOLERANCIA_M = {
-    "car_imovel_2026_06": 2, "car_passivo_2026_06": 2,
+    "car_imovel_2026_10": 2, "car_passivo_2026_06": 2,
+    "car_app_2026_10": 2, "car_reserva_legal_2026_10": 2, "car_uso_restrito_2026_10": 2,
+    "car_vegetacao_nativa_2026_10": 2,
     "sigef_privado": 2, "sigef_publico": 2, "snci_privado": 2, "snci_publico": 2,
     "geologia_ibge_2021": 15, "geomorfologia_ibge_2021": 15, "pedologia_ibge_2021": 15,
     "vegetacao_ibge_2026": 15, "biomas_ibge_2025": 15, "limite_estadual_malha_2025": 15,
@@ -112,6 +118,10 @@ def subir(url: str, camada: str) -> None:
             "-lco", "OVERWRITE=YES",
             "-lco", "LAUNDER=YES",
             "-nlt", "PROMOTE_TO_MULTI",
+            # O fid tem de ser o da base: o codigo do CAR e a vegetacao por imovel sao ligados
+            # por ele. Sem isso o banco renumera em sequencia e, quando a simplificacao do _01
+            # descarta uma feicao, tudo depois dela fica deslocado.
+            "-preserve_fid",
             "-gt", "20000",
             camada,
         ],

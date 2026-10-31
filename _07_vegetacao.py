@@ -10,11 +10,14 @@ levaria mais de 15 horas. Em vez disso, para cada cena (G1 a G194):
 No fim, _cache/vegetacao_cog/imovel_vegetacao.csv tem fid e hectares de vegetacao.
 
     python _07_vegetacao.py
+    python _07_vegetacao.py --so-hectares   refaz so os hectares por imovel (CAR novo), sem
+                                            regravar os COG, que nao dependem do CAR
 """
 
 import csv
 import math
 import subprocess
+import sys
 from collections import defaultdict
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
@@ -29,8 +32,10 @@ PASTA = Path(__file__).resolve().parent
 PLANET = Path(r"F:\Vertentes\Planet_Vertentes")
 VEGETACAO = Path(r"F:\Vertentes\Classificacao_Vegetacao")
 SAIDA = PASTA / "_cache" / "vegetacao_cog"
-IMOVEIS = PASTA / "_cache" / "car_imovel_seis_nucleos.gpkg"
+CAR = "car_imovel_2026_10"
+IMOVEIS = PASTA / "_cache" / f"{CAR}_seis_nucleos.gpkg"
 PARALELO = 4
+SO_HECTARES = "--so-hectares" in sys.argv
 
 # Elipsoide GRS80 (SIRGAS 2000): metros por grau na latitude dada.
 A, E2 = 6378137.0, 0.00669438002290
@@ -50,7 +55,7 @@ def baixar_imoveis():
                if l.startswith("DATABASE_URL="))
     subprocess.run(["ogr2ogr", "-f", "GPKG", str(IMOVEIS), f"PG:{url}", "-nln", "imoveis",
                     "-sql", "select fid as id, st_transform(geom, 4674) as geom "
-                            "from vertentes.car_imovel_2026_06 where selecionado = 'Sim'"], check=True)
+                            f"from vertentes.{CAR} where selecionado = 'Sim'"], check=True)
 
 
 def processar(cena: str):
@@ -91,13 +96,15 @@ def processar(cena: str):
         if pixels.any():
             somas[int(fid)] = float((pixels.sum(axis=1) * ha_linha[lin0:lin1]).sum())
 
-    subprocess.run(["gdalwarp", "-q", "-overwrite", "-r", "near", "-of", "COG",
-                    "-co", "TILING_SCHEME=GoogleMapsCompatible", "-co", "BLOCKSIZE=256",
-                    "-co", "COMPRESS=DEFLATE", "-co", "PREDICTOR=2", "-co", "ADD_ALPHA=NO",
-                    "-co", "OVERVIEW_RESAMPLING=MODE", "-co", "OVERVIEW_COUNT=4",
-                    "-co", "OVERVIEWS=IGNORE_EXISTING", str(temporario), str(destino)], check=True)
+    if not SO_HECTARES:
+        subprocess.run(["gdalwarp", "-q", "-overwrite", "-r", "near", "-of", "COG",
+                        "-co", "TILING_SCHEME=GoogleMapsCompatible", "-co", "BLOCKSIZE=256",
+                        "-co", "COMPRESS=DEFLATE", "-co", "PREDICTOR=2", "-co", "ADD_ALPHA=NO",
+                        "-co", "OVERVIEW_RESAMPLING=MODE", "-co", "OVERVIEW_COUNT=4",
+                        "-co", "OVERVIEWS=IGNORE_EXISTING", str(temporario), str(destino)], check=True)
     temporario.unlink(missing_ok=True)
-    return cena, somas, round(destino.stat().st_size / 1e6, 1), int((veg == 1).sum())
+    tamanho = round(destino.stat().st_size / 1e6, 1) if destino.exists() else 0.0
+    return cena, somas, tamanho, int((veg == 1).sum())
 
 
 def main():

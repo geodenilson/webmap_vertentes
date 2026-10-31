@@ -62,7 +62,7 @@ export function imovelAtual() {
 const LIMITE = {
   id: IDS.limite, titulo: "CAR selecionado", tipo: "line", geometria: "POLYGON",
   pintura: { "line-color": COR_LIMITE, "line-width": 3 },
-  legenda: [["CAR selecionado", COR_LIMITE]], fonte: "SICAR, imóvel do CAR, junho de 2026",
+  legenda: [["CAR selecionado", COR_LIMITE]], fonte: "SICAR, imóvel do CAR, outubro de 2026",
 };
 const VEGETACAO = {
   id: IDS.vegetacao, titulo: "Vegetação mapeada", tipo: "fill", geometria: "POLYGON", semConsulta: true,
@@ -160,7 +160,7 @@ function primeiroRotulo() {
 
 // Com um imovel aberto, o preenchimento dos imoveis do CAR cobriria a imagem: fica so o
 // contorno, e a opacidade volta ao fechar.
-const CAR = "car_imovel_2026_06";
+const CAR = "car_imovel_2026_10";
 let opacidadeCar = null;
 
 function esconderPreenchimentoCar() {

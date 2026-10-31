@@ -401,6 +401,20 @@ AJUSTES DE 30/10/2026 (pedido do Denilson)
      branco e sem caixa.
    - Legenda: "CAR selecionado" (o imóvel aberto) e "Limite do CAR" (os contornos da
      escolha de imóveis), os dois com simbologia editável, ordem e lixeira.
+13. CAR de outubro de 2026 (31/10, pedido do Denilson). Base oficial
+   Vertentes_nucleos_v20261031.gpkg (demanda 013); _01, _02 e _03 apontam para ela.
+   - Sobem car_imovel_2026_10 (no lugar do CAR de junho), car_app_2026_10,
+     car_reserva_legal_2026_10, car_uso_restrito_2026_10 e car_vegetacao_nativa_2026_10,
+     sem os imóveis cancelados. Zoom mínimo 11, tolerância de 2 m, viram ponto quando
+     pequenos. APP, RL, uso restrito e vegetação levam só situação, condição e áreas.
+   - sql/29: as funções que liam car_imovel_2026_06 (tile, resumo, rótulos, presença no
+     imóvel e imovel_webmap) passam a ler car_imovel_2026_10; índices do resumo; presença
+     das camadas novas; o CAR de junho sai do banco.
+   - imovel_codigo recarregada com o fid da camada nova (259.010 imóveis dos seis núcleos,
+     _cache/imovel_codigo_2026_10.csv). imovel_vegetacao refeita com
+     python _07_vegetacao.py --so-hectares (os COG da vegetação não dependem do CAR).
+   - Painel: grupo "CAR" (imóveis, APP, reserva legal, uso restrito, vegetação nativa e
+     passivo) separado de "Fundiário" (assentamentos, SIGEF e SNCI).
 10. sql/28: com um imóvel aberto, municípios e os mapas da seleção (sel_*) não são mais
    recortados pelo imóvel. Recortado, o contorno do município corria sobre o limite do
    imóvel.

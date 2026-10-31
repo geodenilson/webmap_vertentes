@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Copia da base oficial para o webmap.
 
-Le Vertentes_nucleos_v20261025.gpkg e grava _cache/vertentes_web_v20261025.gpkg, que e o
+Le Vertentes_nucleos_v20261031.gpkg e grava _cache/vertentes_web_v20261031.gpkg, que e o
 arquivo enviado ao Supabase. A base oficial continua sendo a fonte de todo numero; esta copia
 so serve para desenhar.
 
@@ -30,8 +30,8 @@ from osgeo import gdal, ogr  # noqa: E402
 
 gdal.UseExceptions()
 
-BASE = r"F:\Vertentes\Demandas\013_Base_Nucleos_gpkg\Vertentes_nucleos_v20261025.gpkg"
-VERSAO = "v20261025"
+BASE = r"F:\Vertentes\Demandas\013_Base_Nucleos_gpkg\Vertentes_nucleos_v20261031.gpkg"
+VERSAO = "v20261031"
 PASTA = os.path.dirname(os.path.abspath(__file__))
 SAIDA = os.path.join(PASTA, "_cache", f"vertentes_web_{VERSAO}.gpkg")
 
@@ -44,7 +44,11 @@ FORA_DO_MAPA = {"curso_dagua_ana_bho6", "pan_abrangencia_icmbio_2024_05"}
 # Tolerancia em metros. O que nao esta aqui fica com a padrao.
 TOLERANCIA_PADRAO = 5
 TOLERANCIA = {
-    "car_imovel_2026_06": 2,
+    "car_imovel_2026_10": 2,
+    "car_app_2026_10": 2,
+    "car_reserva_legal_2026_10": 2,
+    "car_uso_restrito_2026_10": 2,
+    "car_vegetacao_nativa_2026_10": 2,
     "car_passivo_2026_06": 2,
     "sigef_privado": 2,
     "sigef_publico": 2,
@@ -81,11 +85,17 @@ PADRAO_PESSOAL = re.compile(r"cpf|cnpj|infrator|autuad|detent|empreen|proces", r
 PADRAO_LIXO = re.compile(r"^(fid_|shape_|st_area|st_perimet|objectid)", re.I)
 
 # No passivo a base herdou dezenas de campos do intersect. Ficam so estes.
+TEMA_CAR = ["num_area", "ind_status", "des_condic", "nucleo", "nome_nucleo", "selecionado", "ha_no_nucleo"]
 SO_ESTES = {
     "car_passivo_2026_06": [
         "classe", "geocodigo", "nom_munic", "sigla_uf", "Bioma",
         "nucleo", "nome_nucleo", "selecionado", "ha_no_nucleo",
     ],
+    # APP, RL, uso restrito e vegetacao nativa declarados: a situacao do imovel e a area.
+    "car_app_2026_10": TEMA_CAR,
+    "car_reserva_legal_2026_10": TEMA_CAR,
+    "car_uso_restrito_2026_10": TEMA_CAR,
+    "car_vegetacao_nativa_2026_10": TEMA_CAR,
 }
 
 
