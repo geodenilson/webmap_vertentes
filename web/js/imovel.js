@@ -60,9 +60,9 @@ export function imovelAtual() {
 // simbologia (botao direito na legenda). Sao sempre os mesmos objetos: a simbologia mudada
 // pelo usuario fica neles e no navegador, como nas outras camadas.
 const LIMITE = {
-  id: IDS.limite, titulo: "Imóvel do CAR", tipo: "line", geometria: "POLYGON",
+  id: IDS.limite, titulo: "CAR selecionado", tipo: "line", geometria: "POLYGON",
   pintura: { "line-color": COR_LIMITE, "line-width": 3 },
-  legenda: [["Limite do imóvel", COR_LIMITE]], fonte: "SICAR, imóvel do CAR, junho de 2026",
+  legenda: [["CAR selecionado", COR_LIMITE]], fonte: "SICAR, imóvel do CAR, junho de 2026",
 };
 const VEGETACAO = {
   id: IDS.vegetacao, titulo: "Vegetação mapeada", tipo: "fill", geometria: "POLYGON", semConsulta: true,

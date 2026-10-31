@@ -14,22 +14,54 @@ const RODAPE_Y = 199;
 const FOTO = { largura: 1405, pixelRatio: 2 };
 FOTO.altura = Math.round(FOTO.largura * QUADRO.altura / QUADRO.largura);
 
-// Mapinhas de localizacao, um embaixo do outro na esquerda, com o titulo dentro, no alto.
-// Os quatro (Brasil, nucleos, nucleo, municipio) somam cerca de 145 mm e nao chegam na escala.
-const MAPINHA = { x: 11.5, y: 16.5, largura: 40, altura: 34, separacao: 3, cabeca: 4.4 };
+// Mapinhas de localizacao, um embaixo do outro na esquerda, presos a base do mapa como a
+// legenda do outro lado, com o titulo dentro de cada quadro.
+const MAPINHA = { x: 11.5, largura: 40, altura: 34, separacao: 3, cabeca: 4.4 };
 const MAPINHA_BRASIL_X = MAPINHA.x;
+const BASE_QUADROS = QUADRO.y + QUADRO.altura - 3;
+// Quantos mapinhas a folha leva (2 a 4, conforme o recorte). Definido a cada folha.
+let totalMapinhas = 1;
+
+function topoDosMapinhas() {
+  return BASE_QUADROS - totalMapinhas * MAPINHA.altura - (totalMapinhas - 1) * MAPINHA.separacao;
+}
 
 function caixaDoMapinha(i) {
-  return { x: MAPINHA.x, y: MAPINHA.y + i * (MAPINHA.altura + MAPINHA.separacao), largura: MAPINHA.largura, altura: MAPINHA.altura };
+  return { x: MAPINHA.x, y: topoDosMapinhas() + i * (MAPINHA.altura + MAPINHA.separacao), largura: MAPINHA.largura, altura: MAPINHA.altura };
+}
+
+// Norte oficial da colecao de mapas (Demandas/004, Norte.pdf), no alto a direita.
+const NORTE = { largura: 12, altura: 12.4, url: "img/norte.png" };
+let imagemNorte = null;
+
+async function carregarNorte() {
+  if (imagemNorte) return imagemNorte;
+  const resposta = await fetch(NORTE.url);
+  const blob = await resposta.blob();
+  imagemNorte = await new Promise((resolve) => {
+    const leitor = new FileReader();
+    leitor.onload = () => resolve(leitor.result);
+    leitor.readAsDataURL(blob);
+  });
+  return imagemNorte;
 }
 
 // A legenda ocupa a lateral direita: um bloco preso ao canto de baixo que cresce para cima
-// ate a altura do topo dos mapinhas. Quando nao cabe, abre outro bloco a esquerda, tambem
-// alinhado pela base. Se ainda cobrir o desenho, o mapa se afasta.
+// ate logo abaixo do norte. Quando nao cabe, abre outro bloco a esquerda, tambem alinhado
+// pela base. Se ainda cobrir o desenho, o mapa se afasta.
 const LEGENDA = {
-  topo: MAPINHA.y - 5, larguraMaxima: 54,
+  topo: QUADRO.y + 24, larguraMaxima: 54,
   folga: 3, linha: 3.4, fonte: 6.6, recuoClasse: 3, amostra: 7, entreBlocos: 2.5,
 };
+
+// Texto com contorno branco (halo): o contorno vai primeiro, o preenchimento por cima.
+function textoComHalo(doc, texto, x, y, opcoes = {}, espessura = 0.6) {
+  doc.setLineJoin("round");
+  doc.setDrawColor(255, 255, 255);
+  doc.setLineWidth(espessura);
+  doc.text(texto, x, y, { ...opcoes, renderingMode: "stroke" });
+  doc.text(texto, x, y, { ...opcoes, renderingMode: "fill" });
+}
 const AFASTAR = { passo: 0.2, maximo: 6 };
 
 const VERDE = [31, 94, 46];
@@ -156,7 +188,8 @@ function desenharEscala(doc, centro, zoom) {
   const metrosPorMm = metrosPorPixel * FOTO.largura / QUADRO.largura;
   const comprimento = escalaBonita(metrosPorMm * 45);
   const mm = comprimento / metrosPorMm;
-  const x = QUADRO.x + 6;
+  // Centralizada embaixo: os cantos de baixo sao dos mapinhas e da legenda.
+  const x = QUADRO.x + QUADRO.largura / 2 - mm / 2;
   const y = QUADRO.y + QUADRO.altura - 8;
 
   const rotulo = comprimento >= 1000 ? `${(comprimento / 1000).toLocaleString("pt-BR")} km` : `${comprimento} m`;
@@ -180,22 +213,15 @@ function desenharEscala(doc, centro, zoom) {
   return x + mm + meioRotulo + 3;
 }
 
-// Norte embaixo, logo a direita da escala: a lateral direita fica para a legenda.
-function desenharNorte(doc, depoisDaEscala) {
-  const cx = depoisDaEscala + 9;
-  const cy = QUADRO.y + QUADRO.altura - 10;
-  opacidade(doc, 0.85);
+// Norte oficial no alto a direita, sobre um disco branco discreto para ler em cima da imagem.
+function desenharNorte(doc, imagem) {
+  const x = QUADRO.x + QUADRO.largura - NORTE.largura - 5;
+  const y = QUADRO.y + 4;
+  opacidade(doc, 0.75);
   doc.setFillColor(255, 255, 255);
-  doc.circle(cx, cy, 7, "F");
+  doc.circle(x + NORTE.largura / 2, y + NORTE.altura / 2, NORTE.largura / 2 + 1.5, "F");
   opacidade(doc, 1);
-  doc.setFillColor(...TEXTO);
-  doc.triangle(cx, cy - 5, cx - 2.6, cy + 2.8, cx, cy + 1.4, "F");
-  doc.setFillColor(170, 165, 155);
-  doc.triangle(cx, cy - 5, cx + 2.6, cy + 2.8, cx, cy + 1.4, "F");
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(7.5);
-  doc.setTextColor(...TEXTO);
-  doc.text("N", cx, cy + 6.2, { align: "center" });
+  if (imagem) doc.addImage(imagem, "PNG", x, y, NORTE.largura, NORTE.altura);
 }
 
 // Mapinhas de localizacao ----------------------------------------------------
@@ -344,15 +370,11 @@ function desenharMapinhas(doc, contornos, nucleoAtual) {
   const estados = contornos.estados ?? [];
   const nucleos = contornos.nucleos ?? [];
 
-  // Titulo geral da coluna de mapinhas, fora dos quadros.
-  opacidade(doc, 0.85);
-  doc.setFillColor(255, 255, 255);
-  doc.rect(MAPINHA.x, MAPINHA.y - 5.6, MAPINHA.largura, 4.8, "F");
-  opacidade(doc, 1);
+  // Titulo geral da coluna de mapinhas, fora dos quadros, com halo.
   doc.setFont("helvetica", "bold");
   doc.setFontSize(7.8);
   doc.setTextColor(...VERDE);
-  doc.text("Localização", MAPINHA.x + MAPINHA.largura / 2, MAPINHA.y - 2, { align: "center" });
+  textoComHalo(doc, "Localização", MAPINHA.x + MAPINHA.largura / 2, topoDosMapinhas() - 1.8, { align: "center" });
 
   const brasil = moldura(doc, caixaDoMapinha(0), "No Brasil");
   const noBrasil = projetor(brasil, extensao(estados.map((e) => e.geometria)));
@@ -391,38 +413,30 @@ function desenharMapinhas(doc, contornos, nucleoAtual) {
 
 // Titulo e subtitulo centrados entre si. O bloco fica centrado na folha quando cabe;
 // senao, encostado logo depois dos mapinhas.
+// Titulo em caixa alta e subtitulo em negrito, sem caixa branca: os dois com halo branco.
 function desenharTitulo(doc, titulo, recorte) {
-  // Entre a coluna dos mapinhas e a faixa da legenda, que pode subir ate o alto.
-  const inicio = MAPINHA_BRASIL_X + MAPINHA.largura + 6;
-  const fim = QUADRO.x + QUADRO.largura - (LEGENDA.larguraMaxima + 2 * LEGENDA.folga + 6);
+  // Entre a margem esquerda e o norte; os mapinhas ficam embaixo.
+  const inicio = QUADRO.x + 6;
+  const fim = QUADRO.x + QUADRO.largura - NORTE.largura - 10;
   const centroFolha = FOLHA.largura / 2;
 
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(13);
-  const linhas = doc.splitTextToSize(titulo, fim - inicio);
+  doc.setFontSize(14.5);
+  const linhas = doc.splitTextToSize(titulo.toLocaleUpperCase("pt-BR"), fim - inicio);
   const larguraTitulo = Math.max(...linhas.map((l) => doc.getTextWidth(l)));
-  doc.setFont("helvetica", "normal");
   doc.setFontSize(7.5);
   const larguraRecorte = doc.getTextWidth(recorte);
   const largura = Math.max(larguraTitulo, larguraRecorte);
 
   const cabe = centroFolha - largura / 2 >= inicio && centroFolha + largura / 2 <= fim;
   const centro = cabe ? centroFolha : inicio + largura / 2;
-  const altura = 6 * linhas.length + 4.5;
 
-  opacidade(doc, 0.85);
-  doc.setFillColor(255, 255, 255);
-  doc.rect(centro - largura / 2 - 3, QUADRO.y + 3.5, largura + 6, altura, "F");
-  opacidade(doc, 1);
-
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(13);
+  doc.setFontSize(14.5);
   doc.setTextColor(...VERDE);
-  linhas.forEach((linha, i) => doc.text(linha, centro, QUADRO.y + 9.5 + i * 6, { align: "center" }));
-  doc.setFont("helvetica", "normal");
+  linhas.forEach((linha, i) => textoComHalo(doc, linha, centro, QUADRO.y + 10 + i * 6.4, { align: "center" }, 0.9));
   doc.setFontSize(7.5);
   doc.setTextColor(...SUAVE);
-  doc.text(recorte, centro, QUADRO.y + 9.5 + linhas.length * 6 - 1.2, { align: "center" });
+  textoComHalo(doc, recorte, centro, QUADRO.y + 10 + linhas.length * 6.4 - 1.4, { align: "center" }, 0.6);
 }
 
 // Legenda --------------------------------------------------------------------
@@ -886,6 +900,9 @@ export async function exportarPDF(map, {
   doc.setFont("helvetica", "normal");
   doc.setFontSize(NOTA.fonte);
   notaLegenda = nota ? { texto: nota, largura: doc.getTextWidth(nota) } : null;
+  const temMunicipio = Boolean(municipioAtual && contornosMunicipios?.length);
+  totalMapinhas = 1 + (nucleoAtual !== null ? 1 : 0) + (temMunicipio ? 1 : 0) + (temMunicipio && imovel?.imovel ? 1 : 0);
+  const norte = await carregarNorte().catch((erro) => { console.error(erro); return null; });
 
   const { imagem, centro, zoom, presentes, colunas } = await fotografar(
     map, (m) => arrumarLegenda(doc, m, camadas), enquadramentoDoImovel(imovel),
@@ -902,7 +919,8 @@ export async function exportarPDF(map, {
   desenharMapinhaMunicipios(doc, contornosMunicipios, municipioAtual, posNucleo);
   desenharMapinhaImovel(doc, contornosMunicipios, municipioAtual, imovel, posNucleo + 1);
   desenharTitulo(doc, titulo || "Projeto Vertentes", recorte);
-  desenharNorte(doc, desenharEscala(doc, centro, zoom));
+  desenharEscala(doc, centro, zoom);
+  desenharNorte(doc, norte);
   desenharLegenda(doc, colunas);
 
   const fontes = [];

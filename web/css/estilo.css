@@ -244,26 +244,6 @@ select {
 }
 #dialogo-pdf .opcao:has(input:checked) { border-color: var(--verde); background: #f3f7f1; }
 #dialogo-pdf .opcao small { color: var(--suave); }
-#dialogo-pdf .cabecalho-lista {
-  display: flex;
-  justify-content: space-between;
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: .04em;
-  color: var(--suave);
-  padding: 0 2px 4px;
-  border-bottom: 1px solid var(--borda);
-}
-#lista-pdf .linha-pdf {
-  display: grid;
-  grid-template-columns: 18px 14px 1fr 172px;
-  gap: 6px;
-  align-items: center;
-  padding: 5px 2px;
-  font-size: 13px;
-  border-bottom: 1px solid #efebe4;
-}
-#lista-pdf select { padding: 4px 6px; font-size: 12px; }
 #dialogo-pdf .acoes { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
 
 .maplibregl-popup-content { font-size: 12px; max-height: 320px; overflow-y: auto; }

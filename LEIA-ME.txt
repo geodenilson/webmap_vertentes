@@ -390,6 +390,17 @@ AJUSTES DE 30/10/2026 (pedido do Denilson)
    cima até a altura do topo dos mapinhas. Quando não cabe, abre outro bloco à esquerda,
    também alinhado pela base. O título do mapa termina antes dessa faixa, e no nível do
    imóvel o enquadramento deixa a faixa livre.
+12. Ajustes de 31/10:
+   - Diálogo do PDF só com as duas opções e os botões. Em "Mapa e informações", entram
+     todas as camadas ligadas, com números, gráfico e lista, menos limite estadual,
+     núcleos e municípios.
+   - Layout: norte oficial da coleção (web/img/norte.png, recortado de
+     Demandas/004_colecção_mapas/Norte.pdf) no alto à direita; escala centralizada
+     embaixo; mapinhas presos à base do mapa, como a legenda do outro lado, com
+     "Localização" acima; título em caixa alta e subtítulo em negrito, os dois com halo
+     branco e sem caixa.
+   - Legenda: "CAR selecionado" (o imóvel aberto) e "Limite do CAR" (os contornos da
+     escolha de imóveis), os dois com simbologia editável, ordem e lixeira.
 10. sql/28: com um imóvel aberto, municípios e os mapas da seleção (sel_*) não são mais
    recortados pelo imóvel. Recortado, o contorno do município corria sobre o limite do
    imóvel.

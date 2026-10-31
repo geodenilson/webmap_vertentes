@@ -453,6 +453,19 @@ function recarregarTiles() {
 const CAR_IMOVEL = "car_imovel_2026_06";
 const SELECAO = "selecao_car";
 
+// Os contornos da escolha entram na legenda e no PDF como "Limite do CAR", ao lado do
+// "CAR selecionado" (o imovel aberto), com a mesma simbologia editavel.
+const LIMITES_CAR = {
+  id: SELECAO, titulo: "Limite do CAR", tipo: "line", geometria: "POLYGON",
+  pintura: { "line-color": "#ffd21f", "line-width": 1.3 },
+  legenda: [["Limite do CAR", "#ffd21f"]], fonte: "SICAR, imóveis do CAR, junho de 2026",
+};
+prepararSimbologia([LIMITES_CAR]);
+
+function selecaoVisivel() {
+  return Boolean(municipioAtual) && $("selecao-car").checked;
+}
+
 function adicionarSelecaoCar() {
   const car = CAMADAS.find((c) => c.id === CAR_IMOVEL);
   if (!car || !catalogo.has(CAR_IMOVEL)) return;
@@ -460,13 +473,15 @@ function adicionarSelecaoCar() {
   const comum = { source: SELECAO, "source-layer": CAR_IMOVEL, layout: { visibility: "none" } };
   const acima = mapa.getStyle().layers.find((l) => l.id.endsWith("__rotulo") || l.id === "rotulos_uf")?.id;
   mapa.addLayer({ id: `${SELECAO}__clique`, type: "fill", ...comum, paint: { "fill-color": "#ffd21f", "fill-opacity": 0 } }, acima);
-  mapa.addLayer({ id: SELECAO, type: "line", ...comum, paint: { "line-color": "#ffd21f", "line-width": 1.3 } }, acima);
+  mapa.addLayer({ id: SELECAO, type: "line", ...comum, paint: { ...LIMITES_CAR.pintura } }, acima);
+  aplicarOrdem();
 }
 
 function mostrarSelecaoCar(ligar) {
   for (const id of [SELECAO, `${SELECAO}__clique`]) {
     if (mapa.getLayer(id)) mapa.setLayoutProperty(id, "visibility", ligar ? "visible" : "none");
   }
+  desenharLegenda();
 }
 
 // A escolha so vale com um municipio escolhido.
@@ -630,10 +645,15 @@ const ORDEM_PADRAO = comImovel(CAMADAS.map((c) => c.id).reverse());
 let ordemTopo = lerOrdem();
 let arrastando = null;
 
+// Camadas fora de CAMADAS que entram na ordem: as do imovel e os limites do CAR.
+function idsExtras() {
+  return [...IDS_IMOVEL, SELECAO];
+}
+
 function comImovel(lista) {
-  const sem = lista.filter((id) => !IDS_IMOVEL.includes(id));
+  const sem = lista.filter((id) => !idsExtras().includes(id));
   const i = sem.indexOf("municipios_malha_2025");
-  sem.splice(i + 1, 0, ...IDS_IMOVEL);
+  sem.splice(i + 1, 0, ...idsExtras());
   return sem;
 }
 
@@ -641,7 +661,7 @@ function lerOrdem() {
   try {
     let salva = JSON.parse(localStorage.getItem(CHAVE_ORDEM) || "null");
     // Ordem salva antes de o imovel entrar na lista: o imovel vai para a posicao padrao.
-    if (Array.isArray(salva) && !IDS_IMOVEL.every((id) => salva.includes(id))) salva = comImovel(salva);
+    if (Array.isArray(salva) && !idsExtras().every((id) => salva.includes(id))) salva = comImovel(salva);
     const mesmas = Array.isArray(salva) && salva.length === ORDEM_PADRAO.length
       && ORDEM_PADRAO.every((id) => salva.includes(id));
     return mesmas ? salva : [...ORDEM_PADRAO];
@@ -653,15 +673,19 @@ function ordemMudou() {
 }
 
 // Camadas ligadas na ordem de desenho, a de cima primeiro. Vale para legenda e PDF.
+function camadasExtras() {
+  return [...camadasDoImovel(), ...(selecaoVisivel() ? [LIMITES_CAR] : [])];
+}
+
 function camadasNaOrdem() {
-  const doImovel = camadasDoImovel();
-  const porId = new Map([...CAMADAS, ...doImovel].map((c) => [c.id, c]));
+  const extras = camadasExtras();
+  const porId = new Map([...CAMADAS, ...extras].map((c) => [c.id, c]));
   return ordemTopo.map((id) => porId.get(id))
-    .filter((c) => c && (doImovel.includes(c) || visivel(c)));
+    .filter((c) => c && (extras.includes(c) || visivel(c)));
 }
 
 function ehDoImovel(id) {
-  return IDS_IMOVEL.includes(id);
+  return idsExtras().includes(id);
 }
 
 // Sobe as camadas, da de baixo para a de cima, ate logo abaixo dos nomes. O preenchimento
@@ -672,7 +696,8 @@ function aplicarOrdem() {
   const porId = new Map(CAMADAS.map((c) => [c.id, c]));
   for (const id of [...ordemTopo].reverse()) {
     if (ehDoImovel(id)) {
-      for (const parte of partesNoMapa(id)) if (mapa.getLayer(parte)) mapa.moveLayer(parte, ancora);
+      const partes = id === SELECAO ? [`${SELECAO}__clique`, SELECAO] : partesNoMapa(id);
+      for (const parte of partes) if (mapa.getLayer(parte)) mapa.moveLayer(parte, ancora);
       continue;
     }
     const camada = porId.get(id);
@@ -785,6 +810,11 @@ $("legenda").addEventListener("click", (e) => {
   const botao = e.target.closest("[data-remover]");
   if (!botao) return;
   const id = botao.dataset.remover;
+  if (id === SELECAO) {
+    $("selecao-car").checked = false;
+    mostrarSelecaoCar(false);
+    return;
+  }
   if (ehDoImovel(id)) {
     desligarNoImovel(id);
     return;
@@ -811,8 +841,8 @@ $("legenda").addEventListener("contextmenu", (e) => {
     abrirSimbologia(e, camada, mapa, CAMADAS, aoMudarSimbologia);
     return;
   }
-  const doImovel = camadasDoImovel().find((c) => c.id === alvo.dataset.camada);
-  if (doImovel) abrirSimbologia(e, doImovel, mapa, camadasDoImovel(), aoMudarSimbologia);
+  const extra = camadasExtras().find((c) => c.id === alvo.dataset.camada);
+  if (extra) abrirSimbologia(e, extra, mapa, camadasExtras(), aoMudarSimbologia);
 });
 
 document.querySelectorAll('input[name="fundo"]').forEach((radio) => {
@@ -881,14 +911,8 @@ function consultar(evento) {
 
 // PDF ------------------------------------------------------------------------
 
-// Camadas de moldura: entram na lista da pagina de informacoes, mas desmarcadas.
+// Camadas de moldura: ficam fora da pagina de informacoes.
 const MOLDURA = new Set(["nucleos_malha_2025", "municipios_malha_2025", "limite_estadual_malha_2025"]);
-
-const MODOS_RESUMO = [
-  ["completo", "Números, gráfico e lista"],
-  ["grafico", "Números e gráfico"],
-  ["numeros", "Só os números"],
-];
 
 function textoRecorte() {
   const alvo = nucleos.find((n) => n.nucleo === nucleoAtual);
@@ -902,27 +926,17 @@ function textoRecorte() {
   return municipioAtual ? `${municipioAtual.nm_mun} (${municipioAtual.uf}) · ${nucleo}` : nucleo;
 }
 
-function montarListaPDF() {
-  const lista = $("lista-pdf");
-  // Limite e vegetacao do imovel entram no quadro do imovel, nao em cartao proprio.
-  const candidatas = camadasNaOrdem().filter((c) => !ehDoImovel(c.id));
-  if (!candidatas.length) {
-    lista.innerHTML = '<p class="sub">Nenhuma camada ligada.</p>';
-    return;
-  }
-  lista.innerHTML = candidatas.map((camada) => {
-    const marcada = !MOLDURA.has(camada.id) ? "checked" : "";
-    const opcoes = MODOS_RESUMO.map(([v, r]) => `<option value="${v}">${r}</option>`).join("");
-    return `<label class="linha-pdf"><input type="checkbox" data-pdf="${camada.id}" ${marcada}>`
-      + `${amostraComChave(camada)}<span>${camada.titulo}</span>`
-      + `<select data-modo="${camada.id}">${opcoes}</select></label>`;
-  }).join("");
+// Pagina de informacoes: todas as camadas ligadas, com numeros, grafico e lista. Ficam de
+// fora as de moldura e as do imovel (limite, vegetacao, limites do CAR), que entram no
+// quadro do imovel.
+function camadasDasInformacoes() {
+  return camadasNaOrdem()
+    .filter((c) => !MOLDURA.has(c.id) && !ehDoImovel(c.id) && catalogo.has(c.id))
+    .map((camada) => ({ camada, modo: "completo" }));
 }
 
 function abrirDialogoPDF() {
-  montarListaPDF();
   $("aviso-dialogo").hidden = true;
-  $("escolha-camadas").hidden = document.querySelector('input[name="modo-pdf"]:checked').value !== "informacoes";
   $("fundo-dialogo").hidden = false;
 }
 
@@ -930,9 +944,6 @@ function fecharDialogoPDF() {
   $("fundo-dialogo").hidden = true;
 }
 
-document.querySelectorAll('input[name="modo-pdf"]').forEach((radio) => {
-  radio.addEventListener("change", (e) => { $("escolha-camadas").hidden = e.target.value !== "informacoes"; });
-});
 $("cancelar-pdf").addEventListener("click", fecharDialogoPDF);
 $("fundo-dialogo").addEventListener("mousedown", (e) => { if (e.target.id === "fundo-dialogo") fecharDialogoPDF(); });
 document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("fundo-dialogo").hidden) fecharDialogoPDF(); });
@@ -965,12 +976,7 @@ async function buscarResumos(escolhas, aviso) {
 $("dialogo-pdf").addEventListener("submit", async (evento) => {
   evento.preventDefault();
   const comInformacoes = document.querySelector('input[name="modo-pdf"]:checked').value === "informacoes";
-  const escolhas = comInformacoes
-    ? [...document.querySelectorAll("#lista-pdf [data-pdf]:checked")].map((caixa) => ({
-      camada: CAMADAS.find((c) => c.id === caixa.dataset.pdf),
-      modo: document.querySelector(`[data-modo="${caixa.dataset.pdf}"]`).value,
-    }))
-    : [];
+  const escolhas = comInformacoes ? camadasDasInformacoes() : [];
 
   const botao = $("confirmar-pdf");
   const avisoDialogo = $("aviso-dialogo");
