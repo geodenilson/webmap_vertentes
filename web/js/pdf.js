@@ -31,7 +31,7 @@ function caixaDoMapinha(i) {
 }
 
 // Norte oficial da colecao de mapas (Demandas/004, Norte.pdf), no alto a direita.
-const NORTE = { largura: 12, altura: 12.4, url: "img/norte.png" };
+const NORTE = { largura: 18, altura: 18.6, url: "img/norte.png" };
 let imagemNorte = null;
 
 async function carregarNorte() {
@@ -50,7 +50,7 @@ async function carregarNorte() {
 // ate logo abaixo do norte. Quando nao cabe, abre outro bloco a esquerda, tambem alinhado
 // pela base. Se ainda cobrir o desenho, o mapa se afasta.
 const LEGENDA = {
-  topo: QUADRO.y + 24, larguraMaxima: 54,
+  topo: QUADRO.y + 30, larguraMaxima: 54,
   folga: 3, linha: 3.4, fonte: 6.6, recuoClasse: 3, amostra: 7, entreBlocos: 2.5,
 };
 
