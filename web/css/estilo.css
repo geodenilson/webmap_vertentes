@@ -286,6 +286,8 @@ select {
   color: #fff; background: var(--verde); border: 0; border-radius: 4px; cursor: pointer;
 }
 .popup-local .aviso-local { color: var(--destaque); }
+.passos-local { margin: 6px 0; padding-left: 18px; }
+.passos-local li { margin: 3px 0; }
 
 /* Celular ------------------------------------------------------------------ */
 @media (max-width: 767px) {

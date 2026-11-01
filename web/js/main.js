@@ -979,13 +979,30 @@ function prepararOndeEstou() {
   });
   controle.on("error", (erro) => {
     procurarLocal = false;
-    const motivo = erro.code === 1
-      ? "O navegador não tem permissão para usar a localização. Libere nas configurações do site e tente de novo."
+    const motivo = erro.code === 1 ? comoLiberarLocalizacao()
       : "Não foi possível obter a localização do aparelho. Tente de novo em local aberto.";
     popupLocal?.remove();
-    popupLocal = new maplibregl.Popup({ maxWidth: "320px" })
-      .setLngLat(mapa.getCenter()).setHTML(`<h3>Onde estou</h3><p class="sub">${motivo}</p>`).addTo(mapa);
+    popupLocal = new maplibregl.Popup({ maxWidth: "340px" })
+      .setLngLat(mapa.getCenter()).setHTML(`<h3>Onde estou</h3><div class="sub">${motivo}</div>`).addTo(mapa);
   });
+}
+
+// O navegador recusa sem perguntar quando a localizacao esta desligada no aparelho ou o site
+// ja foi negado antes. O caminho para liberar muda com o sistema.
+function comoLiberarLocalizacao() {
+  const ua = navigator.userAgent;
+  const iphone = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+  const passos = iphone
+    ? ["Ajustes > Privacidade e Segurança > Serviços de Localização: ligado.",
+       `Na mesma tela, em ${/CriOS/.test(ua) ? "Chrome" : "Sites do Safari"}, escolha "Ao Usar o App" ou "Perguntar".`,
+       ...(/CriOS/.test(ua) ? [] : ['No Safari, toque em "aA" ao lado do endereço > Ajustes do Site > Localização > Perguntar.'])]
+    : /Android/.test(ua)
+      ? ["Configurações > Localização: ligada.",
+         "No navegador, toque no cadeado ao lado do endereço > Permissões > Localização > Permitir."]
+      : ["Clique no cadeado ao lado do endereço e permita a localização para este site."];
+  return "O aparelho não deixou o navegador usar a localização. Para liberar:"
+    + `<ol class="passos-local">${passos.map((p) => `<li>${p}</li>`).join("")}</ol>`
+    + "Depois, recarregue a página e toque de novo no botão.";
 }
 
 async function mostrarOndeEstou({ longitude, latitude, accuracy }) {
