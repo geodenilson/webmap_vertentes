@@ -435,6 +435,16 @@ AJUSTES DE 30/10/2026 (pedido do Denilson)
    a caixa do painel seguem tirando a camada de vez.
    O quadro do imóvel no PDF passou a se chamar "CAR selecionado", com a cor do limite
    na legenda (inclusive se mudada pela simbologia).
+17. "Onde estou" (01/11, pedido da equipe de campo): botão de localização do MapLibre
+   (GeolocateControl), com ponto azul, círculo de precisão e acompanhamento do GPS. A cada vez
+   que o botão é ligado, a primeira posição vai ao banco (public.onde_estou(lon, lat),
+   sql/30) e um popup mostra município, núcleo e imóveis do CAR no ponto, com os botões
+   "Filtrar este município" e "Abrir este imóvel" (fazem os mesmos passos do painel).
+   Ponto em mais de um imóvel (CAR sobreposto) lista todos; precisão acima de 50 m traz
+   aviso; fora dos núcleos, avisa. A posição não é gravada. Consulta de 25 a 130 ms.
+   Precisa de internet: sem sinal o GPS acha a posição, mas não há consulta nem mapa.
+   No celular, zoom e "Onde estou" ficam no canto inferior esquerdo, porque o quadro do
+   imóvel ocupa o alto da tela.
 10. sql/28: com um imóvel aberto, municípios e os mapas da seleção (sel_*) não são mais
    recortados pelo imóvel. Recortado, o contorno do município corria sobre o limite do
    imóvel.

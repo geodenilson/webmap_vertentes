@@ -279,10 +279,20 @@ select {
 .maplibregl-popup-content td:first-child { color: var(--suave); white-space: nowrap; }
 .maplibregl-popup-content td:last-child { min-width: 120px; overflow-wrap: anywhere; }
 .maplibregl-popup-content h3 { margin: 0 0 4px; font-size: 12px; color: var(--verde); }
+.popup-local .local-item { padding: 6px 0; border-top: 1px solid #e6e0d4; }
+.popup-local .codigo-car { word-break: break-all; }
+.popup-local .botao-local {
+  display: block; width: 100%; margin-top: 5px; padding: 7px 8px; font: inherit; font-weight: 600;
+  color: #fff; background: var(--verde); border: 0; border-radius: 4px; cursor: pointer;
+}
+.popup-local .aviso-local { color: var(--destaque); }
 
 /* Celular ------------------------------------------------------------------ */
 @media (max-width: 767px) {
   #tela-mapa, #tela-mapa.painel-fechado { grid-template-columns: 1fr; }
+  /* O quadro do imovel ocupa o alto da tela: zoom e "Onde estou" descem para junto do polegar. */
+  #mapa .maplibregl-ctrl-top-right { top: auto; right: auto; left: 0; bottom: 34px; }
+  #mapa .maplibregl-ctrl-top-right .maplibregl-ctrl { margin: 0 0 8px 10px; }
   #painel {
     position: fixed; top: 0; left: 0; bottom: 0; z-index: 25;
     width: min(320px, 86vw);

@@ -1,6 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 import { SUPABASE_URL, SUPABASE_CHAVE, BASE_OFICIAL } from "./config.js";
-import { CAMADAS, TEMAS, RESUMO, CAMPOS_POPUP, VALOR_POPUP } from "./camadas.js";
+import { CAMADAS, TEMAS, RESUMO, CAMPOS_POPUP, VALOR_POPUP, SITUACAO_CAR } from "./camadas.js";
 import { exportarPDF } from "./pdf.js";
 import { prepararSimbologia, abrirSimbologia } from "./simbologia.js";
 import { itensLegenda, amostraDe, misturarComBranco, comClassesPresentes } from "./legenda.js";
@@ -249,6 +249,7 @@ async function abrirMapa() {
     },
   });
   mapa.addControl(new maplibregl.NavigationControl({ visualizePitch: false }), "top-right");
+  prepararOndeEstou();
   mapa.addControl(new maplibregl.ScaleControl({ unit: "metric" }), "bottom-left");
   window.mapaVertentes = mapa;
   // A atribuicao do fundo comeca fechada; o "i" abre.
@@ -947,6 +948,116 @@ document.querySelectorAll('input[name="fundo"]').forEach((radio) => {
     mapa.setLayoutProperty("satelite", "visibility", fundo === "satelite" ? "visible" : "none");
   });
 });
+
+// Onde estou -------------------------------------------------------------------
+// Botao de localizacao do MapLibre: ponto azul com o circulo de precisao, seguindo o GPS. A
+// cada vez que o botao e ligado, a primeira posicao vai ao banco (onde_estou, sql/30) e um
+// popup mostra municipio, nucleo e imoveis do CAR no ponto, com os botoes que aplicam o
+// filtro. A posicao nao e gravada.
+
+const PRECISAO_CAR = 50;
+let procurarLocal = false;
+let popupLocal = null;
+
+function prepararOndeEstou() {
+  if (!("geolocation" in navigator)) return;
+  const controle = new maplibregl.GeolocateControl({
+    positionOptions: { enableHighAccuracy: true, timeout: 20000 },
+    trackUserLocation: true,
+    showAccuracyCircle: true,
+    fitBoundsOptions: { maxZoom: 15 },
+  });
+  mapa.addControl(controle, "top-right");
+  const botao = controle._container?.querySelector("button");
+  if (botao) botao.title = "Onde estou";
+  controle.on("trackuserlocationstart", () => { procurarLocal = true; });
+  controle.on("trackuserlocationend", () => { if (!controle._watchState?.startsWith("ACTIVE")) procurarLocal = false; });
+  controle.on("geolocate", (posicao) => {
+    if (!procurarLocal) return;
+    procurarLocal = false;
+    mostrarOndeEstou(posicao.coords);
+  });
+  controle.on("error", (erro) => {
+    procurarLocal = false;
+    const motivo = erro.code === 1
+      ? "O navegador não tem permissão para usar a localização. Libere nas configurações do site e tente de novo."
+      : "Não foi possível obter a localização do aparelho. Tente de novo em local aberto.";
+    popupLocal?.remove();
+    popupLocal = new maplibregl.Popup({ maxWidth: "320px" })
+      .setLngLat(mapa.getCenter()).setHTML(`<h3>Onde estou</h3><p class="sub">${motivo}</p>`).addTo(mapa);
+  });
+}
+
+async function mostrarOndeEstou({ longitude, latitude, accuracy }) {
+  popupLocal?.remove();
+  popupLocal = new maplibregl.Popup({ maxWidth: "360px", className: "popup-local" })
+    .setLngLat([longitude, latitude])
+    .setHTML('<h3>Onde estou</h3><p class="sub">Procurando núcleo, município e CAR…</p>')
+    .addTo(mapa);
+  const popup = popupLocal;
+  const { data, error } = await supabase.rpc("onde_estou", { lon: longitude, lat: latitude });
+  if (popup !== popupLocal) return;
+  if (error || !data) {
+    console.error(error);
+    popup.setHTML('<h3>Onde estou</h3><p class="sub">Não foi possível consultar o banco. Confira a internet e tente de novo.</p>');
+    return;
+  }
+  const precisao = Math.round(accuracy);
+  let html = `<h3>Onde estou</h3><p class="sub">Precisão do GPS: ± ${precisao.toLocaleString("pt-BR")} m</p>`;
+  if (!data.municipios.length) {
+    html += '<p>Fora dos municípios dos núcleos do projeto.</p>';
+    popup.setHTML(html);
+    return;
+  }
+  const municipio = data.municipios.find((m) => m.nucleo === nucleoAtual) ?? data.municipios[0];
+  for (const m of data.municipios) {
+    html += `<div class="local-item"><b>${m.nm_mun} (${m.uf})</b><br>Núcleo ${m.nucleo} · ${m.nome_nucleo}`
+      + `<button type="button" class="botao-local" data-local-mun="${m.cd_mun}" data-local-nucleo="${m.nucleo}">Filtrar este município</button></div>`;
+  }
+  if (data.imoveis.length) {
+    if (precisao > PRECISAO_CAR) {
+      html += `<p class="sub aviso-local">Com precisão acima de ${PRECISAO_CAR} m o ponto pode cair no imóvel vizinho.</p>`;
+    }
+    if (data.imoveis.length > 1) html += '<p class="sub">O ponto cai em mais de um imóvel do CAR (o CAR tem sobreposição):</p>';
+    for (const im of data.imoveis) {
+      html += `<div class="local-item">CAR <span class="codigo-car">${im.cod_imovel ?? "sem código"}</span><br>`
+        + `${Number(im.area_ha).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} ha · ${SITUACAO_CAR[im.status] ?? im.status ?? ""}`
+        + `<button type="button" class="botao-local" data-local-imovel="${im.id}">Abrir este imóvel</button></div>`;
+    }
+  } else {
+    html += '<p class="sub">Nenhum imóvel do CAR neste ponto.</p>';
+  }
+  popup.setHTML(html);
+  popup.getElement()?.addEventListener("click", (e) => {
+    const botao = e.target.closest(".botao-local");
+    if (!botao) return;
+    popup.remove();
+    if (botao.dataset.localImovel) {
+      irParaLocal(municipio, Number(botao.dataset.localImovel));
+    } else {
+      irParaLocal(data.municipios.find((m) => m.cd_mun === botao.dataset.localMun
+        && String(m.nucleo) === botao.dataset.localNucleo), null);
+    }
+  });
+}
+
+// Os mesmos passos de quem escolhe no painel: nucleo, municipio e, se pedido, o imovel.
+async function irParaLocal(m, imovel) {
+  if (!m) return;
+  if (nucleoAtual !== m.nucleo) {
+    $("nucleo").value = String(m.nucleo);
+    await escolherNucleo(m.nucleo);
+  }
+  if (municipioAtual?.cd_mun !== m.cd_mun) {
+    $("municipio").value = m.cd_mun;
+    await escolherMunicipio(m.cd_mun);
+  }
+  if (imovel != null) {
+    $("selecao-car").checked = true;
+    mostrarSelecaoCar(true);
+    abrirImovel(imovel);
+  }
+}
 
 // Consulta -------------------------------------------------------------------
 

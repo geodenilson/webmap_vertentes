@@ -60,7 +60,7 @@ const FASE_QUILOMBO = [
 // Vigor da pastagem: as mesmas cores da colecao de mapas (Demandas/004).
 const VIGOR_PASTAGEM = [["1", "#a61c00"], ["2", "#fdae61"], ["3", "#2d7bb6"]];
 const ROTULO_VIGOR = { 1: "Vigor baixo", 2: "Vigor médio", 3: "Vigor alto" };
-const SITUACAO_CAR = { AT: "Ativo", PE: "Pendente", SU: "Suspenso", CA: "Cancelado" };
+export const SITUACAO_CAR = { AT: "Ativo", PE: "Pendente", SU: "Suspenso", CA: "Cancelado" };
 const ANO_PRODES = [
   "interpolate", ["linear"], ["to-number", ["get", "year"], 2002],
   2002, "#f6d8a8", 2012, "#ec9a52", 2019, "#d6512a", 2025, "#8f1d10",
