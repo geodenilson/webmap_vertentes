@@ -139,8 +139,10 @@ function disponivel(camada) {
 }
 
 // Camada sem nada no recorte escolhido nao aparece no painel. Bioma e limite estadual, de
-// contexto, ficam sempre.
+// contexto, ficam sempre. Os criterios da selecao de municipios comparam municipios entre si
+// e so valem para todos os nucleos ou para um nucleo inteiro.
 function presente(camada) {
+  if (camada.tema === "selecao" && municipioAtual) return false;
   return presentes === null || camada.contexto || presentes.has(camada.id);
 }
 

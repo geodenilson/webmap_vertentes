@@ -424,6 +424,10 @@ AJUSTES DE 30/10/2026 (pedido do Denilson)
      largura e se redesenha no fim da animação (map.resize). O quadro do imóvel acompanha.
    - O padrão só é reaplicado quando a largura cruza 768 px: girar o celular não fecha o
      painel que a pessoa abriu.
+15. Grupo "Seleção de municípios" só nos níveis "Os seis núcleos" e "um núcleo, todos os
+   municípios" (01/11). Com um município (ou imóvel) escolhido o grupo some do painel e
+   as camadas saem do mapa, da legenda e do PDF; ao voltar para "todos os municípios"
+   reaparecem como estavam ligadas. Regra em presente(), no main.js.
 10. sql/28: com um imóvel aberto, municípios e os mapas da seleção (sel_*) não são mais
    recortados pelo imóvel. Recortado, o contorno do município corria sobre o limite do
    imóvel.
