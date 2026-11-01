@@ -73,6 +73,12 @@ const VEGETACAO = {
 };
 prepararSimbologia([LIMITE, VEGETACAO]);
 
+// Nome e cor do limite como estao na legenda, para o quadro do imovel no PDF.
+export function chaveDoLimite() {
+  const [titulo, cor] = LIMITE.legenda[0];
+  return { titulo, cor };
+}
+
 // Ids das camadas do imovel na ordem da legenda (a de cima primeiro), para o main.js
 // encaixa-las na ordem das outras camadas.
 export const IDS_IMOVEL = [IDS.limite, IDS.vegetacao];

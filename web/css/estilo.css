@@ -149,7 +149,9 @@ button.discreto { background: none; color: var(--suave); padding: 4px 6px; font-
 #legenda h2 { margin: 0 0 6px; font-size: 12px; color: var(--suave); text-transform: uppercase; }
 #legenda .item { display: flex; gap: 6px; align-items: center; margin: 2px 0; }
 #legenda .grupo { margin: 6px 0 2px; font-weight: 600; }
-#legenda .item.classe { padding-left: 26px; }
+#legenda .item.classe { padding-left: 46px; }
+#legenda .mostrar { width: 14px; height: 14px; margin: 0; flex: none; cursor: pointer; accent-color: var(--verde); }
+#legenda .camada-legenda.oculta .amostra, #legenda .camada-legenda.oculta span { opacity: .45; }
 #legenda .grupo { display: flex; gap: 6px; align-items: center; }
 #legenda .remover {
   display: inline-grid;

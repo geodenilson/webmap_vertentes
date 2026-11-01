@@ -814,13 +814,14 @@ function desenharCartaoImovel(doc, x, y, a) {
   doc.setLineWidth(0.25);
   doc.setFillColor(252, 251, 248);
   doc.roundedRect(x, y, largura, altura, 1.5, 1.5, "FD");
-  doc.setDrawColor(255, 210, 31);
+  // Mesmo nome e cor do limite na legenda, inclusive se a simbologia foi mudada.
+  doc.setDrawColor(...misturarComBranco(a.chave.cor, 1));
   doc.setLineWidth(0.9);
   doc.rect(x + 3, y + 3.4, 5, 3.2, "S");
   doc.setFont("helvetica", "bold");
   doc.setFontSize(8.6);
   doc.setTextColor(...VERDE);
-  doc.text("Imóvel do CAR", x + 10, y + 6);
+  doc.text(a.chave.titulo, x + 10, y + 6);
   let cy = y + 11.5;
   doc.setFont("helvetica", "normal");
   doc.setFontSize(6.6);

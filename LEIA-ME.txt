@@ -428,6 +428,13 @@ AJUSTES DE 30/10/2026 (pedido do Denilson)
    municípios" (01/11). Com um município (ou imóvel) escolhido o grupo some do painel e
    as camadas saem do mapa, da legenda e do PDF; ao voltar para "todos os municípios"
    reaparecem como estavam ligadas. Regra em presente(), no main.js.
+16. Legenda com caixinha de ligar/desligar à esquerda da lixeira (01/11): desliga a camada
+   no mapa sem tirá-la da legenda (fica esmaecida, com todas as classes) nem desmarcá-la
+   no painel. Camada desligada assim fica fora do PDF (mapa, legenda e informações).
+   Vale também para "CAR selecionado", vegetação do imóvel e "Limite do CAR". A lixeira e
+   a caixa do painel seguem tirando a camada de vez.
+   O quadro do imóvel no PDF passou a se chamar "CAR selecionado", com a cor do limite
+   na legenda (inclusive se mudada pela simbologia).
 10. sql/28: com um imóvel aberto, municípios e os mapas da seleção (sel_*) não são mais
    recortados pelo imóvel. Recortado, o contorno do município corria sobre o limite do
    imóvel.

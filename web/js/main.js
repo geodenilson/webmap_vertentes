@@ -6,7 +6,7 @@ import { prepararSimbologia, abrirSimbologia } from "./simbologia.js";
 import { itensLegenda, amostraDe, misturarComBranco, comClassesPresentes } from "./legenda.js";
 import {
   iniciarImovel, abrirImovel, fecharImovel, imovelAtual, camadasDoImovel, fontesDoImovel,
-  IDS_IMOVEL, partesNoMapa, desligarNoImovel, notaDaImagem,
+  IDS_IMOVEL, partesNoMapa, desligarNoImovel, notaDaImagem, chaveDoLimite,
 } from "./imovel.js";
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_CHAVE);
@@ -30,6 +30,8 @@ let contornos = null;
 let rotulosUF = [];
 const catalogo = new Map();
 const ligadas = new Set(CAMADAS.filter((c) => c.ligada).map((c) => c.id));
+// Desligadas pela caixinha da legenda: continuam na legenda da tela, saem do mapa e do PDF.
+const ocultas = new Set();
 
 const $ = (id) => document.getElementById(id);
 
@@ -146,8 +148,12 @@ function presente(camada) {
   return presentes === null || camada.contexto || presentes.has(camada.id);
 }
 
-function visivel(camada) {
+function naLegenda(camada) {
   return ligadas.has(camada.id) && disponivel(camada) && presente(camada);
+}
+
+function visivel(camada) {
+  return naLegenda(camada) && !ocultas.has(camada.id);
 }
 
 async function atualizarPresentes() {
@@ -275,6 +281,7 @@ async function abrirMapa() {
     iniciarImovel({
       mapa, supabase, aoMudar: desenharLegenda,
       aoTrocar: async () => {
+        for (const id of IDS_IMOVEL) ocultas.delete(id);
         recarregarTiles();
         aplicarOrdem();
         await atualizarPresentes();
@@ -471,6 +478,7 @@ function atualizarVisibilidade() {
 
 function alternar(id, ligar) {
   if (ligar) ligadas.add(id); else ligadas.delete(id);
+  ocultas.delete(id);
   atualizarVisibilidade();
 }
 
@@ -530,6 +538,7 @@ function adicionarSelecaoCar() {
 }
 
 function mostrarSelecaoCar(ligar) {
+  ocultas.delete(SELECAO);
   for (const id of [SELECAO, `${SELECAO}__clique`]) {
     if (mapa.getLayer(id)) mapa.setLayoutProperty(id, "visibility", ligar ? "visible" : "none");
   }
@@ -724,16 +733,34 @@ function ordemMudou() {
   return ordemTopo.some((id, i) => id !== ORDEM_PADRAO[i]);
 }
 
-// Camadas ligadas na ordem de desenho, a de cima primeiro. Vale para legenda e PDF.
+// Camadas ligadas na ordem de desenho, a de cima primeiro. A legenda da tela pede tambem as
+// desligadas pela caixinha; o PDF, so as desenhadas.
 function camadasExtras() {
   return [...camadasDoImovel(), ...(selecaoVisivel() ? [LIMITES_CAR] : [])];
 }
 
-function camadasNaOrdem() {
+function camadasNaOrdem({ comOcultas = false } = {}) {
   const extras = camadasExtras();
   const porId = new Map([...CAMADAS, ...extras].map((c) => [c.id, c]));
   return ordemTopo.map((id) => porId.get(id))
-    .filter((c) => c && (extras.includes(c) || visivel(c)));
+    .filter((c) => c && (extras.includes(c) || naLegenda(c)))
+    .filter((c) => comOcultas || !ocultas.has(c.id));
+}
+
+// As camadas do imovel e os limites do CAR nao passam por atualizarVisibilidade: a caixinha
+// da legenda age direto nas partes delas no mapa. A que saiu da legenda deixa de estar oculta.
+function aplicarOcultasExtras() {
+  const extras = camadasExtras().map((c) => c.id);
+  for (const id of idsExtras()) if (!extras.includes(id)) ocultas.delete(id);
+  for (const id of extras) {
+    const partes = id === SELECAO ? [SELECAO, `${SELECAO}__clique`] : partesNoMapa(id);
+    const valor = ocultas.has(id) ? "none" : "visible";
+    for (const parte of partes) {
+      if (mapa?.getLayer(parte) && mapa.getLayoutProperty(parte, "visibility") !== valor) {
+        mapa.setLayoutProperty(parte, "visibility", valor);
+      }
+    }
+  }
 }
 
 function ehDoImovel(id) {
@@ -776,7 +803,8 @@ function moverNaOrdem(id, alvo, depois) {
 function desenharLegenda() {
   if (arrastando) return;
   const caixa = $("legenda");
-  const visiveis = camadasNaOrdem();
+  aplicarOcultasExtras();
+  const visiveis = camadasNaOrdem({ comOcultas: true });
   if (!visiveis.length && !imovelAtual()) { caixa.innerHTML = ""; return; }
   const padrao = ordemMudou()
     ? '<button type="button" class="ordem-padrao" data-ordem-padrao title="Voltar à ordem original das camadas">ordem padrão</button>'
@@ -785,13 +813,15 @@ function desenharLegenda() {
   for (const camada of visiveis) {
     // So as classes que aparecem no desenho da tela. A vegetacao do imovel e raster, sem
     // feicao para consultar: entra como esta.
+    // Desligada pela caixinha nao tem feicao desenhada: entra com todas as classes.
+    const oculta = ocultas.has(camada.id);
     const ids = mapa ? [camada.id, `${camada.id}__contorno`, `${camada.id}__ponto`].filter((id) => mapa.getLayer(id)) : [];
     const feicoes = ids.length ? mapa.queryRenderedFeatures({ layers: ids }) : [];
-    const daTela = camada.semConsulta ? camada : comClassesPresentes(camada, feicoes);
-    html += `<div class="camada-legenda" draggable="true" data-bloco="${camada.id}" title="Arraste para mudar a ordem no mapa">`;
+    const daTela = camada.semConsulta || oculta ? camada : comClassesPresentes(camada, feicoes);
+    html += `<div class="camada-legenda${oculta ? " oculta" : ""}" draggable="true" data-bloco="${camada.id}" title="Arraste para mudar a ordem no mapa">`;
     itensLegenda(daTela).forEach((item, i) => {
-      // A lixeira fica na primeira linha da camada: no titulo, ou na linha unica.
-      const lixeira = i === 0 ? botaoRemover(camada) : "";
+      // Caixinha e lixeira ficam na primeira linha da camada: no titulo, ou na linha unica.
+      const lixeira = i === 0 ? caixaMostrar(camada, oculta) + botaoRemover(camada) : "";
       html += item.tipo === "titulo"
         ? `<div class="grupo" data-camada="${item.camada}">${lixeira}<span>${item.texto}</span></div>`
         : `<div class="item${item.nivel ? " classe" : ""}" data-camada="${item.camada}">${lixeira}${amostraHTML(item)}<span>${item.texto}</span></div>`;
@@ -845,6 +875,12 @@ $("legenda").addEventListener("dragend", () => {
   desenharLegenda();
 });
 
+function caixaMostrar(camada, oculta) {
+  const acao = oculta ? "Ligar" : "Desligar";
+  return `<input type="checkbox" class="mostrar" data-mostrar-camada="${camada.id}" ${oculta ? "" : "checked"}`
+    + ` title="${acao} no mapa, sem tirar da legenda" aria-label="${acao} ${camada.titulo} no mapa">`;
+}
+
 function botaoRemover(camada) {
   return `<button type="button" class="remover" data-remover="${camada.id}" title="Desligar ${camada.titulo}" aria-label="Desligar ${camada.titulo}">`
     + '<svg viewBox="0 0 16 16" width="11" height="11" aria-hidden="true"><path fill="currentColor" d="M6 1h4l1 1h3v2H2V2h3l1-1zm-3 4h10l-1 10H4L3 5zm3 2v6h1V7H6zm3 0v6h1V7H9z"/></svg>'
@@ -859,9 +895,17 @@ $("legenda").addEventListener("click", (e) => {
     desenharLegenda();
     return;
   }
+  const mostrar = e.target.closest("[data-mostrar-camada]");
+  if (mostrar) {
+    const id = mostrar.dataset.mostrarCamada;
+    if (mostrar.checked) ocultas.delete(id); else ocultas.add(id);
+    if (ehDoImovel(id)) desenharLegenda(); else atualizarVisibilidade();
+    return;
+  }
   const botao = e.target.closest("[data-remover]");
   if (!botao) return;
   const id = botao.dataset.remover;
+  ocultas.delete(id);
   if (id === SELECAO) {
     $("selecao-car").checked = false;
     mostrarSelecaoCar(false);
@@ -1054,7 +1098,9 @@ $("dialogo-pdf").addEventListener("submit", async (evento) => {
       fontesExtras: fontesDoImovel(),
       notaLegenda: notaDaImagem(),
       // No CAR o nome do municipio vem sem acento: vale o da malha do IBGE.
-      imovel: imovelAtual() && { ...imovelAtual(), municipio: municipioAtual?.nm_mun ?? imovelAtual().municipio },
+      imovel: imovelAtual() && {
+        ...imovelAtual(), municipio: municipioAtual?.nm_mun ?? imovelAtual().municipio, chave: chaveDoLimite(),
+      },
       comInformacoes,
       catalogo,
       fundo,
