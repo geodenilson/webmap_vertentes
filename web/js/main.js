@@ -35,6 +35,56 @@ const $ = (id) => document.getElementById(id);
 
 prepararSimbologia(CAMADAS);
 
+// Painel lateral ---------------------------------------------------------------
+// Ate 767 px (celular) o painel nasce fechado e entra por cima do mapa, com um veu que fecha
+// ao toque; a legenda nasce recolhida. No computador o painel nasce aberto e recolhe pela aba
+// da borda, devolvendo a largura ao mapa. O padrao so e reaplicado quando a largura cruza o
+// limite: girar o aparelho nao desfaz a escolha da pessoa.
+const MOVEL = window.matchMedia("(max-width: 767px)");
+
+function redesenharMapa() {
+  // O mapa so assume a largura nova depois da animacao de 300 ms do painel.
+  setTimeout(() => mapa?.resize(), 320);
+}
+
+function abrirPainel(abrir) {
+  const tela = $("tela-mapa");
+  if (MOVEL.matches) {
+    tela.classList.toggle("painel-aberto", abrir);
+    $("veu").hidden = !abrir;
+    return;
+  }
+  tela.classList.toggle("painel-fechado", !abrir);
+  const aba = $("alternar-painel");
+  aba.textContent = abrir ? "‹" : "›";
+  aba.title = abrir ? "Ocultar painel" : "Mostrar painel";
+  aba.setAttribute("aria-label", aba.title);
+  redesenharMapa();
+}
+
+function aplicarModo() {
+  const tela = $("tela-mapa");
+  tela.classList.remove("painel-aberto", "painel-fechado");
+  $("veu").hidden = true;
+  $("legenda").classList.toggle("recolhida", MOVEL.matches);
+  abrirPainel(!MOVEL.matches);
+}
+
+aplicarModo();
+MOVEL.addEventListener("change", aplicarModo);
+$("tela-mapa").addEventListener("transitionend", (e) => {
+  if (e.target.id === "tela-mapa") mapa?.resize();
+});
+$("alternar-painel").addEventListener("click", () => abrirPainel($("tela-mapa").classList.contains("painel-fechado")));
+$("abrir-painel").addEventListener("click", () => abrirPainel(true));
+$("fechar-painel").addEventListener("click", () => abrirPainel(false));
+$("veu").addEventListener("click", () => abrirPainel(false));
+// No celular, o titulo da legenda abre e fecha a lista.
+$("legenda").addEventListener("click", (e) => {
+  if (!MOVEL.matches || !e.target.closest("h2") || e.target.closest("button")) return;
+  $("legenda").classList.toggle("recolhida");
+});
+
 // Login ----------------------------------------------------------------------
 
 supabase.auth.onAuthStateChange((_evento, sessao) => {

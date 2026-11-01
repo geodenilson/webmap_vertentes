@@ -265,7 +265,12 @@ export async function abrirImovel(id) {
   esconderPreenchimentoCar();
   const [o, s, l, n] = data.caixa;
   // O quadro do imovel fica no canto superior esquerdo do mapa: o enquadramento desvia dele.
-  mapa.fitBounds([[o, s], [l, n]], { padding: { top: 40, bottom: 40, right: 40, left: 330 }, duration: 900 });
+  // No celular o quadro ocupa o alto da tela, na largura toda: o enquadramento desce.
+  const movel = window.matchMedia("(max-width: 767px)").matches;
+  const padding = movel
+    ? { top: Math.round(window.innerHeight * 0.45) + 60, bottom: 30, right: 20, left: 20 }
+    : { top: 40, bottom: 40, right: 40, left: 330 };
+  mapa.fitBounds([[o, s], [l, n]], { padding, duration: 900 });
   desenharCartao();
   aoTrocar();
   aoMudar();

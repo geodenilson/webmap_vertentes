@@ -415,6 +415,15 @@ AJUSTES DE 30/10/2026 (pedido do Denilson)
      python _07_vegetacao.py --so-hectares (os COG da vegetação não dependem do CAR).
    - Painel: grupo "CAR" (imóveis, APP, reserva legal, uso restrito, vegetação nativa e
      passivo) separado de "Fundiário" (assentamentos, SIGEF e SNCI).
+14. Celular e painel recolhível (01/11, a partir do guia-sidebar-mapa-mobile.txt):
+   - Até 767 px: o mapa abre em tela cheia, com o painel fechado. O botão "Camadas" no
+     alto à esquerda abre o painel por cima do mapa, com véu escuro; toque no véu ou o ×
+     fecham. A legenda nasce recolhida (toque no título abre e fecha) e o quadro do imóvel
+     ocupa a largura da tela, com o enquadramento descendo para não ficar embaixo dele.
+   - Computador: o painel nasce aberto e recolhe pela aba na borda (‹ ›); o mapa ganha a
+     largura e se redesenha no fim da animação (map.resize). O quadro do imóvel acompanha.
+   - O padrão só é reaplicado quando a largura cruza 768 px: girar o celular não fecha o
+     painel que a pessoa abriu.
 10. sql/28: com um imóvel aberto, municípios e os mapas da seleção (sel_*) não são mais
    recortados pelo imóvel. Recortado, o contorno do município corria sobre o limite do
    imóvel.

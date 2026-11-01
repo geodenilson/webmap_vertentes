@@ -1,0 +1,151 @@
+Guia para reaproveitar a retração do menu lateral do mapa
+AedesGeo — melhor uso da tela no celular
+=========================================================
+
+Origem
+------
+components/map/InteractiveMap.tsx
+app/globals.css (só o posicionamento do zoom do Leaflet)
+
+O painel de camadas não fica sempre aberto. Abaixo de 768 px ele
+nasce fechado e o mapa ocupa a tela inteira. No desktop ele nasce
+aberto e pode ser recolhido sem cobrir o mapa.
+
+
+Ideia geral
+-----------
+Dois estados: isSidebarOpen e isMobile.
+
+  isMobile = largura da janela < 768 px   (breakpoint md do Tailwind)
+
+  Largura >= 768  -> desktop, painel aberto
+  Largura < 768   -> mobile, painel fechado
+
+A checagem roda na montagem e em todo resize. Cruzar o breakpoint
+reaplica o padrão (aberto no desktop, fechado no celular). Um giro
+de tela no meio do uso também recolhe o painel.
+
+O mapa Leaflet precisa ser avisado depois da animação. Sem isso os
+tiles ficam cortados ou com faixa cinza no espaço que o painel
+liberou:
+
+  useEffect(() => {
+    if (!map) return
+    const timer = setTimeout(() => map.invalidateSize(), 300)
+    return () => clearTimeout(timer)
+  }, [isSidebarOpen])
+
+300 ms é a mesma duração da animação do painel.
+
+
+Mobile: painel por cima do mapa
+--------------------------------
+O painel não empurra o mapa. Ele entra por cima, fixo, da esquerda,
+com 320 px de largura (w-80), abaixo do header.
+
+  posição: fixed, left 0, top 64 px, bottom 0, z-50
+  animação: x de -320 até 0 (300 ms, easeInOut)
+  saída: x volta para -320
+
+Por trás dele, um véu escuro cobre o resto da tela
+(fixed inset-0, preto a 50%, z-40). Toque no véu fecha o painel.
+O mapa continua em tela cheia por baixo.
+
+Três controles, nunca os três ao mesmo tempo:
+
+1. Botão no header (só abaixo de md): ícone Menu abre, ícone X fecha.
+2. Botão flutuante de camadas, canto superior esquerdo do mapa,
+   só quando o painel está fechado. É o atalho para reabrir sem
+   voltar ao header. Posição: fixed, top 112 px (top-28), left 8 px,
+   z-30, círculo branco com ícone Layers.
+3. O véu, que só fecha.
+
+O botão flutuante fica à esquerda de propósito. O controle de zoom
+do Leaflet vai para o canto direito, senão os dois se sobrepõem:
+
+  map.zoomControl.setPosition('topright')
+
+No CSS, o canto direito desce um pouco no celular para alinhar com
+o botão de camadas:
+
+  desktop: top 20 px, right 20 px
+  até 768 px: top 8 px, right 8 px
+
+
+Desktop: painel empurra o mapa
+-------------------------------
+Acima de 768 px o painel faz parte do flex, não cobre o mapa.
+
+  posição: relative (não fixed)
+  animação: width de 0 até 320 px
+  saída: width volta a 0
+
+O mapa está em flex-1, então ganha a largura liberada. O
+invalidateSize() no fim da animação redesenha os tiles nessa nova
+largura.
+
+O botão de recolher fica na borda do painel, não no header:
+
+  aberto:  left 336 px   (320 do painel + 16 de folga)
+  fechado: left 20 px
+  ícone:   ChevronLeft para ocultar, ChevronRight para mostrar
+  altura:  top 112 px, igual ao botão flutuante do celular
+
+No desktop não há véu nem botão de camadas flutuante.
+
+
+Header mais baixo no celular
+-----------------------------
+O mapa usa a altura que sobra do header:
+
+  mobile:  calc(100vh - 64px)
+  desktop: calc(100vh - 80px)
+
+No header, rótulos longos somem no celular (hidden md:inline) e
+ficam só os ícones. Nome do usuário e município descem para uma
+segunda linha, visível só abaixo de lg. O painel mobile começa em
+top 64 px por causa dessa altura.
+
+
+O que copiar
+------------
+- Dois modos no mesmo componente, separados por 768 px.
+- Mobile fechado por padrão; desktop aberto por padrão.
+- Mobile: gaveta fixa + véu que fecha ao toque.
+- Desktop: largura animada dentro do flex, mapa ocupa o resto.
+- invalidateSize() 300 ms depois de abrir ou fechar.
+- Zoom do Leaflet no canto direito.
+- No celular, um único botão flutuante para reabrir as camadas.
+- aria-label em cada botão: "Abrir menu de camadas",
+  "Ocultar sidebar", "Mostrar sidebar".
+
+Dependências usadas aqui: framer-motion (AnimatePresence e motion.div)
+e lucide-react (Menu, X, ChevronLeft, ChevronRight, Layers).
+A animação pode ser CSS (transform/width + transition 300 ms) se o
+outro projeto não tiver framer-motion. O invalidateSize continua
+necessário.
+
+
+O que não copiar às cegas
+-------------------------
+Em app/globals.css existem classes .sidebar-mobile, .sidebar-overlay
+e .floating-toggle. O mapa não usa essas classes. O comportamento
+real está nos className do InteractiveMap e no framer-motion.
+Copie o componente, não esse bloco de CSS.
+
+O listener de resize zera a escolha do usuário: qualquer resize
+abaixo de 768 fecha o painel de novo. Funciona bem no primeiro
+carregamento. Se a pessoa abrir o menu e girar o aparelho, ele
+fecha. Para preservar a escolha, só force o estado quando o
+breakpoint mudar, não em todo evento de resize.
+
+
+Checklist
+---------
+[ ] Abaixo de 768 px o mapa abre em tela cheia, painel fechado
+[ ] Botão flutuante reabre o painel; toque no véu fecha
+[ ] Zoom do mapa permanece no canto direito, sem cobrir o botão
+[ ] Acima de 768 px o painel abre ao lado e o botão da borda recolhe
+[ ] Depois de abrir ou fechar, os tiles preenchem a área nova
+    (invalidateSize após a animação)
+[ ] Header não empurra o mapa para fora da viewport no celular

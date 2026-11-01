@@ -53,7 +53,9 @@ button.discreto { background: none; color: var(--suave); padding: 4px 6px; font-
 .sub { margin: 0; color: var(--suave); font-size: 13px; }
 .erro { margin: 0; color: var(--destaque); font-size: 13px; }
 
-#tela-mapa { display: grid; grid-template-columns: 300px 1fr; }
+#tela-mapa { display: grid; grid-template-columns: 300px 1fr; transition: grid-template-columns .3s ease; }
+/* Computador: o painel recolhe e o mapa ocupa a largura liberada. */
+#tela-mapa.painel-fechado { grid-template-columns: 0 1fr; }
 
 #painel {
   display: flex;
@@ -61,7 +63,28 @@ button.discreto { background: none; color: var(--suave); padding: 4px 6px; font-
   background: #fff;
   border-right: 1px solid var(--borda);
   min-height: 0;
+  min-width: 0;
+  overflow: hidden;
 }
+#painel .acoes-cabeca { display: flex; align-items: center; gap: 4px; }
+.fechar-painel { font-size: 22px; line-height: 1; padding: 0 6px; }
+
+/* Aba na borda do painel, no computador. */
+.alternar-painel {
+  position: fixed; top: 64px; left: 300px; z-index: 7;
+  width: 20px; height: 44px; padding: 0;
+  background: #fff; color: var(--suave);
+  border: 1px solid var(--borda); border-left: 0; border-radius: 0 6px 6px 0;
+  font-size: 18px; line-height: 1;
+  box-shadow: 1px 1px 3px rgba(0, 0, 0, .08);
+  transition: left .3s ease;
+}
+.alternar-painel:hover { color: var(--verde); }
+#tela-mapa.painel-fechado .alternar-painel { left: 0; }
+#tela-mapa.painel-fechado #cartao-imovel { left: 32px; }
+
+/* Celular: botao flutuante, gaveta por cima do mapa e veu. */
+.abrir-painel, .fechar-painel, #veu { display: none; }
 #painel header {
   display: flex;
   justify-content: space-between;
@@ -158,6 +181,7 @@ button.discreto { background: none; color: var(--suave); padding: 4px 6px; font-
 .chave-car:has(input:disabled) { color: #a8a29a; }
 #cartao-imovel {
   position: fixed; top: 12px; left: 312px; z-index: 6;
+  transition: left .3s ease;
   width: 290px; max-height: 60vh; overflow-y: auto;
   padding: 10px 12px; font-size: 12px;
 }
@@ -253,3 +277,39 @@ select {
 .maplibregl-popup-content td:first-child { color: var(--suave); white-space: nowrap; }
 .maplibregl-popup-content td:last-child { min-width: 120px; overflow-wrap: anywhere; }
 .maplibregl-popup-content h3 { margin: 0 0 4px; font-size: 12px; color: var(--verde); }
+
+/* Celular ------------------------------------------------------------------ */
+@media (max-width: 767px) {
+  #tela-mapa, #tela-mapa.painel-fechado { grid-template-columns: 1fr; }
+  #painel {
+    position: fixed; top: 0; left: 0; bottom: 0; z-index: 25;
+    width: min(320px, 86vw);
+    box-shadow: 2px 0 12px rgba(0, 0, 0, .2);
+    transform: translateX(-102%);
+    transition: transform .3s ease;
+  }
+  #tela-mapa.painel-aberto #painel { transform: none; }
+  #veu { display: block; position: fixed; inset: 0; z-index: 24; background: rgba(0, 0, 0, .45); }
+  .fechar-painel { display: inline-block; }
+  .alternar-painel { display: none; }
+  .abrir-painel {
+    display: block; position: fixed; top: 10px; left: 10px; z-index: 7;
+    padding: 8px 12px; border-radius: 20px;
+    background: #fff; color: var(--verde); font-weight: 600; font-size: 13px;
+    border: 1px solid var(--borda); box-shadow: 0 1px 4px rgba(0, 0, 0, .15);
+  }
+  #tela-mapa.painel-aberto .abrir-painel { display: none; }
+
+  /* Legenda recolhida por padrao: so o titulo, que abre e fecha com um toque. */
+  #legenda { right: 8px; left: auto; max-width: calc(100vw - 16px); max-height: 50vh; }
+  #legenda h2 { cursor: pointer; margin-bottom: 0; }
+  #legenda h2::after { content: "▴"; font-size: 11px; }
+  #legenda.recolhida h2::after { content: "▾"; }
+  #legenda.recolhida > :not(h2) { display: none; }
+  #legenda:not(.recolhida) h2 { margin-bottom: 6px; }
+
+  /* Quadro do imovel na largura da tela, abaixo do botao de camadas. */
+  #cartao-imovel, #tela-mapa.painel-fechado #cartao-imovel {
+    top: 52px; left: 8px; right: 8px; width: auto; max-height: 45vh;
+  }
+}
