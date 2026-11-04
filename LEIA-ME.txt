@@ -445,6 +445,14 @@ AJUSTES DE 30/10/2026 (pedido do Denilson)
    Precisa de internet: sem sinal o GPS acha a posição, mas não há consulta nem mapa.
    No celular, zoom e "Onde estou" ficam no canto inferior esquerdo, porque o quadro do
    imóvel ocupa o alto da tela.
+18. Cores da paleta oficial do Projeto na interface (04/11). Fonte: 04_COMUNICACAO/Boletim
+   Informativo Mensal/Paleta de cores.jpeg. Verde Cerrado (#173F35, escuro #0D3028) em
+   títulos, botões e cabeçalho do painel; Bege Natural (#F6F1E8) no fundo; Laranja Vivo
+   (#F58220) no botão de PDF e no filete do cabeçalho; Marrom Terra (#79513A) nos rótulos.
+   As cores das camadas no mapa ficam como estavam. Tudo em variáveis no topo do estilo.css.
+   Ficaram para depois, à espera da comunicação: símbolo/favicon (há dois candidatos, o "V"
+   de faixas de rio e as curvas de nível), nome "Vertentes" como imagem, textura de curvas
+   de nível no login, fonte Inter, logos no PDF e ícones dos grupos.
 10. sql/28: com um imóvel aberto, municípios e os mapas da seleção (sel_*) não são mais
    recortados pelo imóvel. Recortado, o contorno do município corria sobre o limite do
    imóvel.

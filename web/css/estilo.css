@@ -1,11 +1,17 @@
+/* Paleta do Projeto (Comunicação, "Paleta de cores" do boletim): Verde Cerrado, Bege
+   Natural, Laranja Vivo e Marrom Terra. As cores das camadas no mapa não seguem a paleta. */
 :root {
-  --fundo: #f7f5f0;
-  --texto: #2b2b2b;
-  --suave: #6f6a60;
-  --borda: #d8d2c6;
-  --verde: #1f5e2e;
-  --verde-claro: #d5e4cd;
-  --destaque: #c1440e;
+  --fundo: #f6f1e8;
+  --painel: #fbf8f2;
+  --texto: #24302b;
+  --suave: #6b6255;
+  --borda: #e0d6c3;
+  --verde: #173f35;
+  --verde-escuro: #0d3028;
+  --verde-claro: #e9e1d2;
+  --laranja: #f58220;
+  --destaque: #c95d0a;
+  --terra: #79513a;
   font-family: "Segoe UI", Roboto, Arial, sans-serif;
   color: var(--texto);
 }
@@ -60,7 +66,7 @@ button.discreto { background: none; color: var(--suave); padding: 4px 6px; font-
 #painel {
   display: flex;
   flex-direction: column;
-  background: #fff;
+  background: var(--painel);
   border-right: 1px solid var(--borda);
   min-height: 0;
   min-width: 0;
@@ -90,15 +96,20 @@ button.discreto { background: none; color: var(--suave); padding: 4px 6px; font-
   justify-content: space-between;
   align-items: center;
   padding: 12px 14px;
-  border-bottom: 1px solid var(--borda);
+  background: var(--verde-escuro);
+  border-bottom: 3px solid var(--laranja);
 }
-#painel h1 { margin: 0; font-size: 16px; color: var(--verde); }
+#painel h1 { margin: 0; font-size: 16px; color: var(--fundo); }
+#painel header button.discreto { color: var(--verde-claro); }
 
 .bloco { padding: 10px 14px; border-bottom: 1px solid var(--borda); }
 .bloco.rolar { flex: 1; overflow-y: auto; }
 .bloco.fundo { display: flex; gap: 12px; align-items: center; font-size: 13px; }
 .bloco.fundo span { color: var(--suave); }
 .bloco.exportar { display: grid; gap: 8px; }
+#exportar, #confirmar-pdf { background: var(--laranja); font-weight: 600; }
+#exportar:hover, #confirmar-pdf:hover { background: var(--destaque); }
+input[type=checkbox], input[type=radio] { accent-color: var(--verde); }
 
 .tema { margin-bottom: 8px; }
 .tema > summary {
@@ -107,7 +118,7 @@ button.discreto { background: none; color: var(--suave); padding: 4px 6px; font-
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: .04em;
-  color: var(--suave);
+  color: var(--verde);
   padding: 4px 0;
 }
 .camada {
@@ -126,7 +137,7 @@ button.discreto { background: none; color: var(--suave); padding: 4px 6px; font-
   border: 1px solid #d3ccbe; background: #fff; color: #a8a29a;
 }
 .botao-rotulo:hover { border-color: #9c937f; color: #4a453d; }
-.botao-rotulo[aria-pressed="true"] { background: #2f5e2a; border-color: #2f5e2a; color: #fff; }
+.botao-rotulo[aria-pressed="true"] { background: var(--verde); border-color: var(--verde); color: #fff; }
 
 .amostra { width: 14px; height: 10px; border: 1px solid rgba(0, 0, 0, .25); display: inline-block; }
 .amostra.linha { height: 0; border: 0; border-top: 2px solid; }
@@ -203,7 +214,7 @@ button.discreto { background: none; color: var(--suave); padding: 4px 6px; font-
 #cartao-imovel .dados-imovel td:first-child { color: var(--suave); padding-right: 8px; white-space: nowrap; }
 #cartao-imovel .chave-imovel { display: flex; gap: 6px; align-items: center; margin: 3px 0; }
 #cartao-imovel .sub { margin: 4px 0 0; font-size: 11px; }
-.rotulo { display: block; font-size: 12px; color: var(--suave); margin-bottom: 4px; }
+.rotulo { display: block; font-size: 12px; color: var(--terra); margin-bottom: 4px; }
 .rotulo.segundo { margin-top: 10px; }
 .rotulo .sub { font-size: 11px; }
 select:disabled { color: #a8a29a; background: #f4f2ed; }
@@ -268,7 +279,7 @@ select {
   font-size: 13px;
   cursor: pointer;
 }
-#dialogo-pdf .opcao:has(input:checked) { border-color: var(--verde); background: #f3f7f1; }
+#dialogo-pdf .opcao:has(input:checked) { border-color: var(--verde); background: var(--fundo); }
 #dialogo-pdf .opcao small { color: var(--suave); }
 #dialogo-pdf .acoes { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
 
