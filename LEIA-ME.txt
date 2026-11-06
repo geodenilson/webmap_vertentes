@@ -460,8 +460,10 @@ AJUSTES DE 30/10/2026 (pedido do Denilson)
    (Soto-Navarro et al. 2020). A geometria e os valores já vêm no tile de qualquer sel_*;
    não há camada nova no banco. A legenda é a grade; o clique no município mostra a
    combinação e todos os critérios. Some com o grupo quando um município está escolhido.
-   Entra no PDF com a grade. As notas sintéticas produtivo × ambiental, quando existirem
-   como colunas, entram como mais duas opções nos seletivos.
+   Entra no PDF com a grade. Na página de informações do PDF, um cartão lista os municípios
+   de cada combinação (sem ida ao banco: as classes já estão no mapa). As notas sintéticas
+   produtivo × ambiental, quando existirem como colunas, entram como mais duas opções nos
+   seletivos.
 10. sql/28: com um imóvel aberto, municípios e os mapas da seleção (sel_*) não são mais
    recortados pelo imóvel. Recortado, o contorno do município corria sobre o limite do
    imóvel.

@@ -116,6 +116,46 @@ export function expressaoCor(campoX, campoY, qx, qy) {
   return ["case", ["any", ausente(campoX), ausente(campoY)], COR_SEM_DADO, match];
 }
 
+export function resumoBivariado(feicoes, estado) {
+  const { x, y, qx, qy, recorte } = estado;
+  const celulas = [];
+  for (let yi = 2; yi >= 0; yi -= 1) {
+    for (let xi = 0; xi < 3; xi += 1) {
+      celulas.push({
+        xi, yi,
+        rotulo: `${ROTULO_CLASSE[yi]} × ${ROTULO_CLASSE[xi].toLowerCase()}`,
+        cor: CORES[yi][xi],
+        nomes: [],
+      });
+    }
+  }
+  const porChave = new Map(celulas.map((c) => [`${c.xi}${c.yi}`, c]));
+  let semDado = 0;
+  for (const p of feicoes) {
+    const cx = classeDe(p[x.campo], qx);
+    const cy = classeDe(p[y.campo], qy);
+    if (cx < 0 || cy < 0) {
+      semDado += 1;
+      continue;
+    }
+    const c = porChave.get(`${cx}${cy}`);
+    const nome = p.nm_mun ? `${p.nm_mun}${p.sigla_uf ? ` (${p.sigla_uf})` : ""}` : null;
+    if (c && nome && !c.nomes.includes(nome)) c.nomes.push(nome);
+  }
+  for (const c of celulas) c.nomes.sort((a, b) => a.localeCompare(b, "pt-BR"));
+  return {
+    bivariado: true,
+    feicoes: feicoes.length,
+    recorte,
+    x: x.nome,
+    y: y.nome,
+    faixasX: ROTULO_CLASSE.map((_, i) => faixa(i, qx)),
+    faixasY: ROTULO_CLASSE.map((_, i) => faixa(i, qy)),
+    celulas,
+    semDado,
+  };
+}
+
 export function montarCamada({ x, y, qx, qy, n, recorte }) {
   const legenda = [];
   for (let yi = 2; yi >= 0; yi -= 1) {

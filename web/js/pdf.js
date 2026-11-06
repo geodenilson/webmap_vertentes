@@ -894,6 +894,102 @@ function notaInformacoes(doc, base) {
   doc.text(doc.splitTextToSize(nota, FOLHA.largura - 2 * INFO.x), INFO.x, 197);
 }
 
+const LARGURA_INFO = FOLHA.largura - 2 * INFO.x;
+
+function textoSobreCor(hex) {
+  const [r, g, b] = rgb(hex);
+  return r * 0.3 + g * 0.59 + b * 0.11 < 145 ? [255, 255, 255] : TEXTO;
+}
+
+function medirCartaoBivariado(doc, r) {
+  const larguraNomes = (LARGURA_INFO - 52 - INFO.separacao) / 2;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(6.1);
+  const colunas = [0, 0];
+  const blocos = r.celulas.map((c) => {
+    const texto = c.nomes.length ? c.nomes.join(", ") : "nenhum município nesta combinação";
+    const linhas = doc.splitTextToSize(texto, larguraNomes - 2);
+    return { ...c, linhas, altura: 4.2 + linhas.length * 2.9 };
+  });
+  for (const b of blocos) {
+    const i = colunas[0] <= colunas[1] ? 0 : 1;
+    colunas[i] += b.altura + 1.6;
+  }
+  return { blocos, larguraNomes, altura: 24 + Math.max(38, ...colunas) };
+}
+
+function desenharCartaoBivariado(doc, x, y, { camada, resumo: r }, med) {
+  const largura = LARGURA_INFO;
+  const { blocos, larguraNomes, altura } = med;
+  doc.setDrawColor(216, 210, 198);
+  doc.setLineWidth(0.25);
+  doc.setFillColor(252, 251, 248);
+  doc.roundedRect(x, y, largura, altura, 1.5, 1.5, "FD");
+
+  const simbolo = amostraDe(camada, camada.legenda[0][1]);
+  amostra(doc, x + 3, y + 5, { ...simbolo, cor: simbolo.cor ?? camada.legenda[0][1] });
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(8.6);
+  doc.setTextColor(...VERDE);
+  doc.text("Dois eixos", x + 10, y + 6);
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(7.2);
+  doc.setTextColor(...TEXTO);
+  const n = `${numero(r.feicoes)} municípios ${r.recorte}`;
+  const extra = r.semDado ? ` · ${numero(r.semDado)} sem dado` : "";
+  doc.text(encurtar(doc, n + extra, largura - 14), x + 10, y + 10.4);
+  doc.setFontSize(5.8);
+  doc.setTextColor(...SUAVE);
+  doc.text(encurtar(doc, `Horizontal: ${r.x} (${r.faixasX.join(" · ")})`, largura - 14), x + 10, y + 14);
+  doc.text(encurtar(doc, `Vertical: ${r.y} (${r.faixasY.join(" · ")})`, largura - 14), x + 10, y + 17.2);
+  doc.text("Tercis dos municípios deste recorte, calculados no mapa.", x + 10, y + 20.2);
+
+  const lado = 8.2;
+  const gx = x + 8;
+  const gy = y + 24;
+  for (let yi = 0; yi < 3; yi += 1) {
+    for (let xi = 0; xi < 3; xi += 1) {
+      const c = r.celulas[yi * 3 + xi];
+      doc.setFillColor(...rgb(c.cor));
+      doc.setDrawColor(200, 194, 182);
+      doc.setLineWidth(0.12);
+      doc.rect(gx + xi * lado, gy + yi * lado, lado, lado, "FD");
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(6.4);
+      doc.setTextColor(...textoSobreCor(c.cor));
+      doc.text(String(c.nomes.length), gx + xi * lado + lado / 2, gy + yi * lado + 5.1, { align: "center" });
+    }
+  }
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(4.5);
+  doc.setTextColor(...SUAVE);
+  doc.text("Alto →", gx + 3 * lado, gy + 3 * lado + 2.4, { align: "right" });
+  doc.text(encurtar(doc, r.y, 28), gx - 1.6, gy + 1.5 * lado, { angle: 90, align: "center" });
+  doc.text(encurtar(doc, r.x, 32), gx + 1.5 * lado, gy + 3 * lado + 2.4, { align: "center" });
+
+  const xNomes = x + 48;
+  const colY = [gy, gy];
+  blocos.forEach((b) => {
+    const i = colY[0] <= colY[1] ? 0 : 1;
+    const cx = xNomes + i * (larguraNomes + INFO.separacao);
+    let cy = colY[i];
+    doc.setFillColor(...rgb(b.cor));
+    doc.setDrawColor(150, 145, 135);
+    doc.setLineWidth(0.1);
+    doc.rect(cx, cy, 3.2, 3.2, "FD");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(6.2);
+    doc.setTextColor(...TEXTO);
+    doc.text(`${b.rotulo} · ${b.nomes.length}`, cx + 4.4, cy + 2.6);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(6.1);
+    doc.setTextColor(...SUAVE);
+    doc.text(b.linhas, cx + 4.4, cy + 5.8);
+    colY[i] += b.altura + 1.6;
+  });
+}
+
 function desenharInformacoes(doc, resumos, { titulo, recorte, base, imovel }) {
   if (!resumos?.length && !imovel) return;
   const areaRecorte = imovel?.area_ha ?? resumos.find((item) => item.resumo)?.resumo.area_recorte;
@@ -910,6 +1006,19 @@ function desenharInformacoes(doc, resumos, { titulo, recorte, base, imovel }) {
     colunas[0] += alturaDoCartaoImovel(doc, imovel) + 5;
   }
   for (const item of resumos) {
+    if (item.camada?.gradeBivariada) {
+      if (!item.resumo?.bivariado) continue;
+      const med = medirCartaoBivariado(doc, item.resumo);
+      let y = Math.min(...colunas);
+      if (y + med.altura > INFO.base && y > INFO.topo + 1) {
+        novaPagina(true);
+        y = INFO.topo;
+      }
+      desenharCartaoBivariado(doc, INFO.x, y, item, med);
+      const baseY = y + med.altura + 5;
+      colunas = colunas.map(() => baseY);
+      continue;
+    }
     const altura = alturaDoCartao(item.resumo, item.modo);
     let coluna = colunas.indexOf(Math.min(...colunas));
     if (colunas[coluna] + altura > INFO.base) {

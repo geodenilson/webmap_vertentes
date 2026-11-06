@@ -10,7 +10,7 @@ import {
 } from "./imovel.js";
 import {
   ID_BIVARIADO, fonteBivariado, eixoPorId, numero, tercis, classeDe,
-  montarCamada, htmlGrade, htmlOpcoes,
+  montarCamada, htmlGrade, htmlOpcoes, resumoBivariado,
 } from "./bivariado.js";
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_CHAVE);
@@ -1382,7 +1382,10 @@ function textoRecorte() {
 // quadro do imovel.
 function camadasDasInformacoes() {
   return camadasNaOrdem()
-    .filter((c) => !MOLDURA.has(c.id) && !ehDoImovel(c.id) && catalogo.has(c.id))
+    .filter((c) => {
+      if (c.id === ID_BIVARIADO) return true;
+      return !MOLDURA.has(c.id) && !ehDoImovel(c.id) && catalogo.has(c.id);
+    })
     .map((camada) => ({ camada, modo: "completo" }));
 }
 
@@ -1406,6 +1409,12 @@ $("exportar").addEventListener("click", abrirDialogoPDF);
 async function buscarResumos(escolhas, aviso) {
   const respostas = [];
   for (const [i, { camada, modo }] of escolhas.entries()) {
+    if (camada.id === ID_BIVARIADO) {
+      aviso.textContent = "Montando as informações do mapa de dois eixos.";
+      const resumo = bivariado?.qx ? resumoBivariado(feicoesBivariado(), bivariado) : null;
+      respostas.push({ camada, modo, campos: {}, resumo });
+      continue;
+    }
     aviso.textContent = `Calculando as informações no banco: ${camada.titulo} (${i + 1} de ${escolhas.length}).`;
     const campos = RESUMO[camada.id] ?? {};
     const parametros = {
