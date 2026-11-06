@@ -150,7 +150,6 @@ input[type=checkbox], input[type=radio] { accent-color: var(--verde); }
   flex: none;
 }
 .amostra-paleta i { display: block; border: 1px solid rgba(0, 0, 0, .22); }
-#fonte-paleta { margin: 2px 0 0; }
 .acoes-bivariado { display: flex; gap: 8px; align-items: center; margin-top: 8px; }
 #gerar-bivariado { padding: 6px 10px; font-size: 13px; }
 #aviso-bivariado { margin-top: 6px; font-size: 11px; }

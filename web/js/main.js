@@ -1132,8 +1132,7 @@ function blocoBivariado() {
   const paleta = paletaPorId(bivariado?.paleta?.id ?? lerPaletaBivariado());
   const bloco = document.createElement("div");
   bloco.className = "bivariado";
-  bloco.innerHTML = `<p class="rotulo">Mapa de dois eixos</p>`
-    + `<p class="sub">Dois critérios, nove cores. As classes são os tercis dos municípios deste recorte (os seis núcleos ou o núcleo escolhido). Paletas ColorBrewer, Crameri e Stevens; as primeiras são amigáveis a daltonismo.</p>`
+  bloco.innerHTML = `<p class="rotulo">Mapa de dois eixos, dois critérios, nove cores.</p>`
     + `<label class="rotulo segundo" for="bivariado-x">Eixo horizontal</label>`
     + `<select id="bivariado-x">${htmlOpcoes()}</select>`
     + `<label class="rotulo segundo" for="bivariado-y">Eixo vertical</label>`
@@ -1143,7 +1142,6 @@ function blocoBivariado() {
     + `<select id="bivariado-paleta">${htmlOpcoesPaleta(paleta.id)}</select>`
     + `<div id="amostra-paleta" class="amostra-paleta" aria-hidden="true">${htmlAmostra(paleta.cores)}</div>`
     + `</div>`
-    + `<p id="fonte-paleta" class="sub">${paleta.fonte}</p>`
     + `<div class="acoes-bivariado">`
     + `<button type="button" id="gerar-bivariado">Gerar mapa</button>`
     + `<button type="button" id="limpar-bivariado" class="discreto" hidden>Tirar do mapa</button>`
@@ -1166,8 +1164,6 @@ function mudarPaletaBivariado() {
   guardarPaletaBivariado(paleta.id);
   const amostra = $("amostra-paleta");
   if (amostra) amostra.innerHTML = htmlAmostra(paleta.cores);
-  const fonte = $("fonte-paleta");
-  if (fonte) fonte.textContent = paleta.fonte;
   if (bivariado?.qx && !municipioAtual) {
     bivariado = { ...bivariado, paleta };
     aplicarPinturaBivariado(bivariado);
