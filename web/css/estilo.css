@@ -140,6 +140,17 @@ input[type=checkbox], input[type=radio] { accent-color: var(--verde); }
 }
 .bivariado .sub { font-size: 11px; }
 .bivariado select { font-size: 12px; padding: 5px 6px; }
+.linha-paleta { display: flex; gap: 8px; align-items: center; }
+.linha-paleta select { flex: 1; min-width: 0; }
+.amostra-paleta {
+  display: grid;
+  grid-template-columns: repeat(3, 9px);
+  grid-template-rows: repeat(3, 9px);
+  gap: 1px;
+  flex: none;
+}
+.amostra-paleta i { display: block; border: 1px solid rgba(0, 0, 0, .22); }
+#fonte-paleta { margin: 2px 0 0; }
 .acoes-bivariado { display: flex; gap: 8px; align-items: center; margin-top: 8px; }
 #gerar-bivariado { padding: 6px 10px; font-size: 13px; }
 #aviso-bivariado { margin-top: 6px; font-size: 11px; }

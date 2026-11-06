@@ -915,7 +915,7 @@ function medirCartaoBivariado(doc, r) {
     const i = colunas[0] <= colunas[1] ? 0 : 1;
     colunas[i] += b.altura + 1.6;
   }
-  return { blocos, larguraNomes, altura: 24 + Math.max(38, ...colunas) };
+  return { blocos, larguraNomes, altura: 27 + Math.max(38, ...colunas) };
 }
 
 function desenharCartaoBivariado(doc, x, y, { camada, resumo: r }, med) {
@@ -943,11 +943,15 @@ function desenharCartaoBivariado(doc, x, y, { camada, resumo: r }, med) {
   doc.setTextColor(...SUAVE);
   doc.text(encurtar(doc, `Horizontal: ${r.x} (${r.faixasX.join(" · ")})`, largura - 14), x + 10, y + 14);
   doc.text(encurtar(doc, `Vertical: ${r.y} (${r.faixasY.join(" · ")})`, largura - 14), x + 10, y + 17.2);
-  doc.text("Tercis dos municípios deste recorte, calculados no mapa.", x + 10, y + 20.2);
+  const paleta = r.paleta
+    ? `Paleta: ${r.paleta}${r.daltonismo ? " (amigável a daltonismo)" : ""}.`
+    : "Tercis dos municípios deste recorte, calculados no mapa.";
+  doc.text(encurtar(doc, paleta, largura - 14), x + 10, y + 20.2);
+  doc.text("Tercis dos municípios deste recorte, calculados no mapa.", x + 10, y + 23);
 
   const lado = 8.2;
   const gx = x + 8;
-  const gy = y + 24;
+  const gy = y + 26.5;
   for (let yi = 0; yi < 3; yi += 1) {
     for (let xi = 0; xi < 3; xi += 1) {
       const c = r.celulas[yi * 3 + xi];

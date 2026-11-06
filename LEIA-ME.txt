@@ -456,8 +456,12 @@ AJUSTES DE 30/10/2026 (pedido do Denilson)
 19. Mapa de dois eixos no grupo "Seleção de municípios" (06/11, alinhamento com o Gustavo).
    No painel, dois seletivos com os 15 critérios; "Gerar mapa" pinta os municípios numa
    grade 3×3 (tercis de cada eixo no recorte atual: os seis núcleos ou um núcleo inteiro).
-   Paleta ciano × laranja de Joshua Stevens, a mesma ideia do mapa de co-benefícios
-   (Soto-Navarro et al. 2020). A geometria e os valores já vêm no tile de qualquer sel_*;
+   Paletas prontas no painel: ColorBrewer ouro × azul (padrão), Crameri oslo × lajolla e
+   azul × violeta (biscale), as três amigáveis a daltonismo; e as clássicas de Joshua
+   Stevens (ciano × laranja do mapa de co-benefícios de Soto-Navarro et al. 2020, mais
+   rosa × azul, verde × azul e roxo × ouro). Fontes: colorbrewer2.org; Crameri, Shephard
+   & Heron 2020 (Nature Communications 11:5444); fabiocrameri.ch/colourmaps. A escolhida
+   fica no navegador e recolore o mapa na hora. A geometria e os valores já vêm no tile de qualquer sel_*;
    não há camada nova no banco. A legenda é a grade; o clique no município mostra a
    combinação e todos os critérios. Some com o grupo quando um município está escolhido.
    Entra no PDF com a grade. Na página de informações do PDF, um cartão lista os municípios

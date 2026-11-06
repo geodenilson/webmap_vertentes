@@ -9,8 +9,8 @@ import {
   IDS_IMOVEL, partesNoMapa, desligarNoImovel, notaDaImagem, chaveDoLimite,
 } from "./imovel.js";
 import {
-  ID_BIVARIADO, fonteBivariado, eixoPorId, numero, tercis, classeDe,
-  montarCamada, htmlGrade, htmlOpcoes, resumoBivariado,
+  ID_BIVARIADO, PALETA_PADRAO, paletaPorId, fonteBivariado, eixoPorId, numero, tercis, classeDe,
+  montarCamada, htmlGrade, htmlOpcoes, htmlOpcoesPaleta, htmlAmostra, resumoBivariado,
 } from "./bivariado.js";
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_CHAVE);
@@ -1114,15 +1114,36 @@ async function irParaLocal(m, imovel) {
 // Duas camadas do grupo Seleção de municípios viram um coroplético 3×3. A geometria é a
 // de qualquer sel_*: cada município já chega com todos os critérios no tile.
 
+const CHAVE_PALETA_BIVARIADO = "vertentes_paleta_bivariado_v1";
+
+function lerPaletaBivariado() {
+  try {
+    return paletaPorId(localStorage.getItem(CHAVE_PALETA_BIVARIADO)).id;
+  } catch {
+    return PALETA_PADRAO;
+  }
+}
+
+function guardarPaletaBivariado(id) {
+  try { localStorage.setItem(CHAVE_PALETA_BIVARIADO, id); } catch { /* modo privado */ }
+}
+
 function blocoBivariado() {
+  const paleta = paletaPorId(bivariado?.paleta?.id ?? lerPaletaBivariado());
   const bloco = document.createElement("div");
   bloco.className = "bivariado";
   bloco.innerHTML = `<p class="rotulo">Mapa de dois eixos</p>`
-    + `<p class="sub">Dois critérios, nove cores. As classes são os tercis dos municípios deste recorte (os seis núcleos ou o núcleo escolhido).</p>`
+    + `<p class="sub">Dois critérios, nove cores. As classes são os tercis dos municípios deste recorte (os seis núcleos ou o núcleo escolhido). Paletas ColorBrewer, Crameri e Stevens; as primeiras são amigáveis a daltonismo.</p>`
     + `<label class="rotulo segundo" for="bivariado-x">Eixo horizontal</label>`
     + `<select id="bivariado-x">${htmlOpcoes()}</select>`
     + `<label class="rotulo segundo" for="bivariado-y">Eixo vertical</label>`
     + `<select id="bivariado-y">${htmlOpcoes()}</select>`
+    + `<label class="rotulo segundo" for="bivariado-paleta">Paleta de cores</label>`
+    + `<div class="linha-paleta">`
+    + `<select id="bivariado-paleta">${htmlOpcoesPaleta(paleta.id)}</select>`
+    + `<div id="amostra-paleta" class="amostra-paleta" aria-hidden="true">${htmlAmostra(paleta.cores)}</div>`
+    + `</div>`
+    + `<p id="fonte-paleta" class="sub">${paleta.fonte}</p>`
     + `<div class="acoes-bivariado">`
     + `<button type="button" id="gerar-bivariado">Gerar mapa</button>`
     + `<button type="button" id="limpar-bivariado" class="discreto" hidden>Tirar do mapa</button>`
@@ -1130,7 +1151,27 @@ function blocoBivariado() {
     + `<p id="aviso-bivariado" class="sub" hidden></p>`;
   bloco.querySelector("#gerar-bivariado").addEventListener("click", gerarBivariado);
   bloco.querySelector("#limpar-bivariado").addEventListener("click", limparBivariado);
+  bloco.querySelector("#bivariado-paleta").addEventListener("change", mudarPaletaBivariado);
+  if (bivariado?.x && bivariado?.y) {
+    bloco.querySelector("#bivariado-x").value = bivariado.x.id;
+    bloco.querySelector("#bivariado-y").value = bivariado.y.id;
+    bloco.querySelector("#limpar-bivariado").hidden = false;
+    bloco.querySelector("#gerar-bivariado").textContent = "Atualizar mapa";
+  }
   return bloco;
+}
+
+function mudarPaletaBivariado() {
+  const paleta = paletaPorId($("bivariado-paleta")?.value);
+  guardarPaletaBivariado(paleta.id);
+  const amostra = $("amostra-paleta");
+  if (amostra) amostra.innerHTML = htmlAmostra(paleta.cores);
+  const fonte = $("fonte-paleta");
+  if (fonte) fonte.textContent = paleta.fonte;
+  if (bivariado?.qx && !municipioAtual) {
+    bivariado = { ...bivariado, paleta };
+    aplicarPinturaBivariado(bivariado);
+  }
 }
 
 function avisoBivariado(texto) {
@@ -1254,7 +1295,9 @@ function gerarBivariado() {
     return;
   }
   ocultas.delete(ID_BIVARIADO);
-  bivariado = { x, y };
+  const paleta = paletaPorId($("bivariado-paleta")?.value ?? lerPaletaBivariado());
+  guardarPaletaBivariado(paleta.id);
+  bivariado = { x, y, paleta };
   $("limpar-bivariado").hidden = false;
   $("gerar-bivariado").textContent = "Atualizar mapa";
   avisoBivariado("Calculando as classes no recorte…");
