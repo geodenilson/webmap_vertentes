@@ -143,7 +143,12 @@ function camadasPresentes(map, camadas) {
   const lista = [];
   for (const camada of camadas) {
     // Raster (vegetacao do imovel) nao tem feicao para consultar: entra como esta.
-    if (camada.semConsulta) {
+    if (camada.semConsulta || camada.gradeBivariada) {
+      if (camada.gradeBivariada) {
+        const ids = subcamadas(map, camada);
+        const feicoes = ids.length ? map.queryRenderedFeatures({ layers: ids }) : [];
+        if (!feicoes.length) continue;
+      }
       lista.push(camada);
       continue;
     }
@@ -471,14 +476,20 @@ function amostra(doc, x, y, item) {
 // divide, e ai o titulo nunca fica sozinho no pe. As classes ficam recuadas sob o titulo.
 function medirGrupo(doc, camada, primeiro) {
   return itensLegenda(camada).map((item, i) => {
+    const espacoAntes = i === 0 && !primeiro ? (item.tipo === "titulo" || item.tipo === "grade" ? 1.8 : 0.6) : 0;
+    if (item.tipo === "grade") {
+      const lado = 4.4;
+      return {
+        ...item, linhas: [], recuoSimbolo: 0, recuoTexto: 0,
+        largura: 10 + 3 * lado + 4, altura: 3 * lado + 10 + espacoAntes, espacoAntes,
+      };
+    }
     doc.setFont("helvetica", item.tipo === "titulo" ? "bold" : "normal");
     doc.setFontSize(LEGENDA.fonte);
     const recuoSimbolo = item.nivel ? LEGENDA.recuoClasse : 0;
     const recuoTexto = item.tipo === "titulo" ? 0 : recuoSimbolo + LEGENDA.amostra;
     const linhas = doc.splitTextToSize(item.texto, LEGENDA.larguraMaxima - recuoTexto);
     const largura = recuoTexto + Math.max(...linhas.map((l) => doc.getTextWidth(l)));
-    // Respiro antes de cada camada: maior antes de um titulo de camada com classes.
-    const espacoAntes = i === 0 && !primeiro ? (item.tipo === "titulo" ? 1.8 : 0.6) : 0;
     return {
       ...item, linhas, largura, recuoSimbolo, recuoTexto,
       altura: linhas.length * LEGENDA.linha + espacoAntes, espacoAntes,
@@ -557,6 +568,25 @@ function caixasDaLegenda(colunas) {
   });
 }
 
+function desenharGradeBivariada(doc, x, y, grade) {
+  const lado = 4.4;
+  const gx = x + 7;
+  for (let yi = 0; yi < 3; yi += 1) {
+    for (let xi = 0; xi < 3; xi += 1) {
+      doc.setFillColor(...rgb(grade.cores[2 - yi][xi]));
+      doc.setDrawColor(200, 194, 182);
+      doc.setLineWidth(0.12);
+      doc.rect(gx + xi * lado, y + yi * lado, lado, lado, "FD");
+    }
+  }
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(4.6);
+  doc.setTextColor(...SUAVE);
+  const corta = (t, n) => (t.length > n ? `${t.slice(0, n - 1)}…` : t);
+  doc.text(corta(grade.y, 36), x + 2.4, y + 1.5 * lado, { angle: 90, align: "center" });
+  doc.text(corta(grade.x, 40), gx + 1.5 * lado, y + 3 * lado + 2.6, { align: "center" });
+}
+
 function desenharLegenda(doc, colunas) {
   for (const caixa of caixasDaLegenda(colunas)) {
     opacidade(doc, 0.92);
@@ -583,12 +613,16 @@ function desenharLegenda(doc, colunas) {
       if (item.tipo === "titulo") {
         doc.setFont("helvetica", "bold");
         doc.text(item.linhas, x, y);
+        y += item.linhas.length * LEGENDA.linha;
+      } else if (item.tipo === "grade") {
+        desenharGradeBivariada(doc, x, y, item.grade);
+        y += item.altura - item.espacoAntes;
       } else {
         doc.setFont("helvetica", "normal");
         amostra(doc, x + item.recuoSimbolo, y - 1, item);
         doc.text(item.linhas, x + item.recuoTexto, y);
+        y += item.linhas.length * LEGENDA.linha;
       }
-      y += item.linhas.length * LEGENDA.linha;
     }
     if (caixa.primeiro && notaLegenda) {
       const yNota = caixa.y + caixa.altura - LEGENDA.folga - 0.6;

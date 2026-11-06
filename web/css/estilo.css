@@ -130,6 +130,47 @@ input[type=checkbox], input[type=radio] { accent-color: var(--verde); }
   padding: 3px 0;
 }
 .camada small { grid-column: 3; color: var(--suave); font-size: 11px; margin-top: -2px; }
+
+.bivariado {
+  margin: 4px 0 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--borda);
+  display: grid;
+  gap: 2px;
+}
+.bivariado .sub { font-size: 11px; }
+.bivariado select { font-size: 12px; padding: 5px 6px; }
+.acoes-bivariado { display: flex; gap: 8px; align-items: center; margin-top: 8px; }
+#gerar-bivariado { padding: 6px 10px; font-size: 13px; }
+#aviso-bivariado { margin-top: 6px; font-size: 11px; }
+
+.grade-bivariada {
+  display: flex;
+  gap: 6px;
+  margin: 6px 0 2px 22px;
+  align-items: stretch;
+}
+.grade-bivariada .eixo-y {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  font-size: 9px;
+  line-height: 1.15;
+  color: var(--suave);
+  max-height: 72px;
+  overflow: hidden;
+  text-align: center;
+  flex: none;
+}
+.grade-bivariada .miolo { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.grade-bivariada .celulas {
+  display: grid;
+  grid-template-columns: repeat(3, 22px);
+  grid-template-rows: repeat(3, 22px);
+  gap: 1px;
+}
+.grade-bivariada .celulas i { display: block; border: 1px solid rgba(0, 0, 0, .22); }
+.grade-bivariada .eixo-x { font-size: 9px; color: var(--suave); line-height: 1.25; max-width: 160px; }
+.grade-bivariada b { font-weight: 600; color: var(--texto); }
 .botao-rotulo {
   grid-column: 4; grid-row: 1;
   font-family: inherit; font-size: 11px; font-weight: 600; line-height: 1;

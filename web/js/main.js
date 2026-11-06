@@ -8,6 +8,10 @@ import {
   iniciarImovel, abrirImovel, fecharImovel, imovelAtual, camadasDoImovel, fontesDoImovel,
   IDS_IMOVEL, partesNoMapa, desligarNoImovel, notaDaImagem, chaveDoLimite,
 } from "./imovel.js";
+import {
+  ID_BIVARIADO, fonteBivariado, eixoPorId, numero, tercis, classeDe,
+  montarCamada, htmlGrade, htmlOpcoes,
+} from "./bivariado.js";
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_CHAVE);
 const URL_TILE = `${SUPABASE_URL}/rest/v1/rpc/tile`;
@@ -32,6 +36,9 @@ const catalogo = new Map();
 const ligadas = new Set(CAMADAS.filter((c) => c.ligada).map((c) => c.id));
 // Desligadas pela caixinha da legenda: continuam na legenda da tela, saem do mapa e do PDF.
 const ocultas = new Set();
+// Mapa de dois eixos, gerado no grupo Seleção de municípios. Null quando o usuário tira.
+let bivariado = null;
+let camadaBivariadoAtual = null;
 
 const $ = (id) => document.getElementById(id);
 
@@ -277,6 +284,7 @@ async function abrirMapa() {
     }
     if (ordemMudou()) aplicarOrdem();
     adicionarRotulosUF();
+    adicionarBivariado();
     atualizarVisibilidade();
     adicionarSelecaoCar();
     iniciarImovel({
@@ -592,6 +600,7 @@ async function escolherNucleo(numero) {
   mapa.getSource("rotulos_uf")?.setData(dadosRotulosUF());
   await atualizarPresentes();
   atualizarVisibilidade();
+  atualizarBivariado();
   const alvo = nucleos.find((n) => n.nucleo === numero);
   const limites = alvo ? [[alvo.oeste, alvo.sul], [alvo.leste, alvo.norte]] : VISTA_INICIAL;
   mapa.fitBounds(limites, { padding: 30, duration: 900 });
@@ -609,6 +618,7 @@ async function escolherMunicipio(codigo) {
   atualizarSelecaoCar();
   await atualizarPresentes();
   atualizarVisibilidade();
+  atualizarBivariado();
   const alvo = municipioAtual ?? nucleos.find((n) => n.nucleo === nucleoAtual);
   if (alvo) mapa.fitBounds([[alvo.oeste, alvo.sul], [alvo.leste, alvo.norte]], { padding: 40, duration: 900 });
 }
@@ -672,6 +682,7 @@ function montarPainel() {
       linha.addEventListener("contextmenu", (e) => abrirSimbologia(e, camada, mapa, CAMADAS, aoMudarSimbologia));
       grupo.appendChild(linha);
     }
+    if (tema === "selecao") grupo.querySelector("summary").after(blocoBivariado());
     lista.appendChild(grupo);
   }
 }
@@ -707,9 +718,16 @@ const ORDEM_PADRAO = comImovel(CAMADAS.map((c) => c.id).reverse());
 let ordemTopo = lerOrdem();
 let arrastando = null;
 
-// Camadas fora de CAMADAS que entram na ordem: as do imovel e os limites do CAR.
+// Camadas fora de CAMADAS que entram na ordem: as do imovel, os limites do CAR e o mapa
+// de dois eixos da selecao de municipios.
 function idsExtras() {
-  return [...IDS_IMOVEL, SELECAO];
+  return [...IDS_IMOVEL, SELECAO, ID_BIVARIADO];
+}
+
+function partesExtra(id) {
+  if (id === SELECAO) return [`${SELECAO}__clique`, SELECAO];
+  if (id === ID_BIVARIADO) return [ID_BIVARIADO, `${ID_BIVARIADO}__contorno`];
+  return partesNoMapa(id);
 }
 
 function comImovel(lista) {
@@ -722,10 +740,15 @@ function comImovel(lista) {
 function lerOrdem() {
   try {
     let salva = JSON.parse(localStorage.getItem(CHAVE_ORDEM) || "null");
-    // Ordem salva antes de o imovel entrar na lista: o imovel vai para a posicao padrao.
-    if (Array.isArray(salva) && !idsExtras().every((id) => salva.includes(id))) salva = comImovel(salva);
-    const mesmas = Array.isArray(salva) && salva.length === ORDEM_PADRAO.length
-      && ORDEM_PADRAO.every((id) => salva.includes(id));
+    if (!Array.isArray(salva)) return [...ORDEM_PADRAO];
+    // Extra nova (imovel, CAR, dois eixos) entra na posicao padrao, sem desfazer o resto.
+    for (const id of idsExtras()) {
+      if (!salva.includes(id)) {
+        const i = salva.indexOf("municipios_malha_2025");
+        salva.splice(i >= 0 ? i + 1 : 0, 0, id);
+      }
+    }
+    const mesmas = salva.length === ORDEM_PADRAO.length && ORDEM_PADRAO.every((id) => salva.includes(id));
     return mesmas ? salva : [...ORDEM_PADRAO];
   } catch { return [...ORDEM_PADRAO]; }
 }
@@ -737,7 +760,11 @@ function ordemMudou() {
 // Camadas ligadas na ordem de desenho, a de cima primeiro. A legenda da tela pede tambem as
 // desligadas pela caixinha; o PDF, so as desenhadas.
 function camadasExtras() {
-  return [...camadasDoImovel(), ...(selecaoVisivel() ? [LIMITES_CAR] : [])];
+  return [
+    ...camadasDoImovel(),
+    ...(selecaoVisivel() ? [LIMITES_CAR] : []),
+    ...(bivariadoNoMapa() ? [camadaBivariadoAtual] : []),
+  ];
 }
 
 function camadasNaOrdem({ comOcultas = false } = {}) {
@@ -754,7 +781,7 @@ function aplicarOcultasExtras() {
   const extras = camadasExtras().map((c) => c.id);
   for (const id of idsExtras()) if (!extras.includes(id)) ocultas.delete(id);
   for (const id of extras) {
-    const partes = id === SELECAO ? [SELECAO, `${SELECAO}__clique`] : partesNoMapa(id);
+    const partes = partesExtra(id);
     const valor = ocultas.has(id) ? "none" : "visible";
     for (const parte of partes) {
       if (mapa?.getLayer(parte) && mapa.getLayoutProperty(parte, "visibility") !== valor) {
@@ -776,8 +803,7 @@ function aplicarOrdem() {
   const porId = new Map(CAMADAS.map((c) => [c.id, c]));
   for (const id of [...ordemTopo].reverse()) {
     if (ehDoImovel(id)) {
-      const partes = id === SELECAO ? [`${SELECAO}__clique`, SELECAO] : partesNoMapa(id);
-      for (const parte of partes) if (mapa.getLayer(parte)) mapa.moveLayer(parte, ancora);
+      for (const parte of partesExtra(id)) if (mapa.getLayer(parte)) mapa.moveLayer(parte, ancora);
       continue;
     }
     const camada = porId.get(id);
@@ -823,9 +849,13 @@ function desenharLegenda() {
     itensLegenda(daTela).forEach((item, i) => {
       // Caixinha e lixeira ficam na primeira linha da camada: no titulo, ou na linha unica.
       const lixeira = i === 0 ? caixaMostrar(camada, oculta) + botaoRemover(camada) : "";
-      html += item.tipo === "titulo"
-        ? `<div class="grupo" data-camada="${item.camada}">${lixeira}<span>${item.texto}</span></div>`
-        : `<div class="item${item.nivel ? " classe" : ""}" data-camada="${item.camada}">${lixeira}${amostraHTML(item)}<span>${item.texto}</span></div>`;
+      if (item.tipo === "titulo") {
+        html += `<div class="grupo" data-camada="${item.camada}">${lixeira}<span>${item.texto}</span></div>`;
+      } else if (item.tipo === "grade") {
+        html += htmlGrade(item.grade);
+      } else {
+        html += `<div class="item${item.nivel ? " classe" : ""}" data-camada="${item.camada}">${lixeira}${amostraHTML(item)}<span>${item.texto}</span></div>`;
+      }
     });
     html += "</div>";
   }
@@ -910,6 +940,10 @@ $("legenda").addEventListener("click", (e) => {
   if (id === SELECAO) {
     $("selecao-car").checked = false;
     mostrarSelecaoCar(false);
+    return;
+  }
+  if (id === ID_BIVARIADO) {
+    limparBivariado();
     return;
   }
   if (ehDoImovel(id)) {
@@ -1076,6 +1110,179 @@ async function irParaLocal(m, imovel) {
   }
 }
 
+// Mapa de dois eixos ---------------------------------------------------------
+// Duas camadas do grupo Seleção de municípios viram um coroplético 3×3. A geometria é a
+// de qualquer sel_*: cada município já chega com todos os critérios no tile.
+
+function blocoBivariado() {
+  const bloco = document.createElement("div");
+  bloco.className = "bivariado";
+  bloco.innerHTML = `<p class="rotulo">Mapa de dois eixos</p>`
+    + `<p class="sub">Dois critérios, nove cores. As classes são os tercis dos municípios deste recorte (os seis núcleos ou o núcleo escolhido).</p>`
+    + `<label class="rotulo segundo" for="bivariado-x">Eixo horizontal</label>`
+    + `<select id="bivariado-x">${htmlOpcoes()}</select>`
+    + `<label class="rotulo segundo" for="bivariado-y">Eixo vertical</label>`
+    + `<select id="bivariado-y">${htmlOpcoes()}</select>`
+    + `<div class="acoes-bivariado">`
+    + `<button type="button" id="gerar-bivariado">Gerar mapa</button>`
+    + `<button type="button" id="limpar-bivariado" class="discreto" hidden>Tirar do mapa</button>`
+    + `</div>`
+    + `<p id="aviso-bivariado" class="sub" hidden></p>`;
+  bloco.querySelector("#gerar-bivariado").addEventListener("click", gerarBivariado);
+  bloco.querySelector("#limpar-bivariado").addEventListener("click", limparBivariado);
+  return bloco;
+}
+
+function avisoBivariado(texto) {
+  const el = $("aviso-bivariado");
+  if (!el) return;
+  el.hidden = !texto;
+  el.textContent = texto || "";
+}
+
+function bivariadoNoMapa() {
+  return Boolean(camadaBivariadoAtual) && !municipioAtual;
+}
+
+function visibilidadeBivariado(ligar) {
+  const valor = ligar && !ocultas.has(ID_BIVARIADO) ? "visible" : "none";
+  for (const id of [ID_BIVARIADO, `${ID_BIVARIADO}__contorno`]) {
+    if (mapa?.getLayer(id)) mapa.setLayoutProperty(id, "visibility", valor);
+  }
+}
+
+function adicionarBivariado() {
+  const fonte = fonteBivariado(mapa);
+  if (!fonte || !mapa.getSource(fonte) || mapa.getLayer(ID_BIVARIADO)) return;
+  const comum = { source: fonte, "source-layer": fonte };
+  mapa.addLayer({
+    id: ID_BIVARIADO, type: "fill", ...comum,
+    layout: { visibility: "none" },
+    paint: { "fill-color": "#bdbdbd", "fill-opacity": 0.85 },
+  });
+  mapa.addLayer({
+    id: `${ID_BIVARIADO}__contorno`, type: "line", ...comum,
+    layout: { visibility: "none" },
+    paint: { "line-color": "#ffffff", "line-width": 0.6 },
+  });
+}
+
+function municipiosDoRecorte() {
+  return nucleoAtual === null
+    ? municipios
+    : municipios.filter((m) => m.nucleo === nucleoAtual);
+}
+
+function textoRecorteBivariado() {
+  if (nucleoAtual === null) return "dos seis núcleos";
+  const n = nucleos.find((x) => x.nucleo === nucleoAtual);
+  return n ? `do Núcleo ${n.nucleo}, ${n.nome}` : "deste núcleo";
+}
+
+function feicoesBivariado() {
+  const fonte = fonteBivariado(mapa);
+  if (!mapa || !fonte) return [];
+  const vistos = new Map();
+  for (const f of mapa.querySourceFeatures(fonte, { sourceLayer: fonte })) {
+    const p = f.properties ?? {};
+    const chave = p.cd_mun ?? p.nm_mun;
+    if (chave != null && !vistos.has(String(chave))) vistos.set(String(chave), p);
+  }
+  return [...vistos.values()];
+}
+
+function esperarFeicoesBivariado() {
+  const esperado = Math.max(1, municipiosDoRecorte().length);
+  return new Promise((resolve) => {
+    const inicio = performance.now();
+    const conferir = () => {
+      const lista = feicoesBivariado();
+      if (lista.length >= esperado * 0.85 || performance.now() - inicio > 8000) {
+        mapa.off("idle", conferir);
+        resolve(lista);
+        return;
+      }
+    };
+    mapa.on("idle", conferir);
+    mapa.triggerRepaint();
+    conferir();
+    setTimeout(conferir, 400);
+  });
+}
+
+function aplicarPinturaBivariado(estado) {
+  camadaBivariadoAtual = montarCamada(estado);
+  if (!mapa.getLayer(ID_BIVARIADO)) return;
+  mapa.setPaintProperty(ID_BIVARIADO, "fill-color", camadaBivariadoAtual.pintura["fill-color"]);
+  visibilidadeBivariado(true);
+  aplicarOrdem();
+  desenharLegenda();
+}
+
+async function pintarBivariado() {
+  if (!bivariado || municipioAtual || !mapa) {
+    visibilidadeBivariado(false);
+    return;
+  }
+  visibilidadeBivariado(true);
+  const feicoes = await esperarFeicoesBivariado();
+  if (!bivariado || municipioAtual) return;
+  if (!feicoes.length) {
+    avisoBivariado("Os municípios ainda não carregaram. Espere o mapa assentar e gere de novo.");
+    return;
+  }
+  const { x, y } = bivariado;
+  const qx = tercis(feicoes.map((p) => numero(p[x.campo])));
+  const qy = tercis(feicoes.map((p) => numero(p[y.campo])));
+  bivariado = { ...bivariado, qx, qy, n: feicoes.length, recorte: textoRecorteBivariado() };
+  aplicarPinturaBivariado(bivariado);
+  const falta = municipiosDoRecorte().length - feicoes.length;
+  avisoBivariado(falta > 3
+    ? `Classes com ${feicoes.length} municípios carregados. Aproxime o mapa se a cor parecer incompleta.`
+    : "");
+}
+
+function gerarBivariado() {
+  const x = eixoPorId($("bivariado-x").value);
+  const y = eixoPorId($("bivariado-y").value);
+  if (!x || !y) {
+    avisoBivariado("Escolha um critério em cada eixo.");
+    return;
+  }
+  if (x.id === y.id) {
+    avisoBivariado("Os dois eixos precisam ser critérios diferentes.");
+    return;
+  }
+  ocultas.delete(ID_BIVARIADO);
+  bivariado = { x, y };
+  $("limpar-bivariado").hidden = false;
+  $("gerar-bivariado").textContent = "Atualizar mapa";
+  avisoBivariado("Calculando as classes no recorte…");
+  pintarBivariado();
+}
+
+function limparBivariado() {
+  bivariado = null;
+  camadaBivariadoAtual = null;
+  visibilidadeBivariado(false);
+  ocultas.delete(ID_BIVARIADO);
+  const limpar = $("limpar-bivariado");
+  if (limpar) limpar.hidden = true;
+  const gerar = $("gerar-bivariado");
+  if (gerar) gerar.textContent = "Gerar mapa";
+  avisoBivariado("");
+  desenharLegenda();
+}
+
+function atualizarBivariado() {
+  if (municipioAtual || !bivariado) {
+    visibilidadeBivariado(false);
+    if (municipioAtual) desenharLegenda();
+    return;
+  }
+  pintarBivariado();
+}
+
 // Consulta -------------------------------------------------------------------
 
 function consultar(evento) {
@@ -1089,18 +1296,38 @@ function consultar(evento) {
       return;
     }
   }
-  const camadasNoMapa = CAMADAS.filter((c) => visivel(c) && mapa.getLayer(c.id))
-    .flatMap((c) => (mapa.getLayer(`${c.id}__ponto`) ? [c.id, `${c.id}__ponto`] : [c.id]));
+  const camadasNoMapa = [
+    ...(bivariadoNoMapa() && !ocultas.has(ID_BIVARIADO) && mapa.getLayer(ID_BIVARIADO) ? [ID_BIVARIADO] : []),
+    ...CAMADAS.filter((c) => visivel(c) && mapa.getLayer(c.id))
+      .flatMap((c) => (mapa.getLayer(`${c.id}__ponto`) ? [c.id, `${c.id}__ponto`] : [c.id])),
+  ];
   // So a camada desenhada por cima no ponto clicado, com os campos escolhidos para ela.
   // Municipio, nucleo e estado ficam sempre ligados por cima: so respondem quando nao ha
   // outra camada no ponto.
   const achados = mapa.queryRenderedFeatures(evento.point, { layers: camadasNoMapa });
   const feicao = achados.find((f) => !MOLDURA.has(f.layer.id.replace(/__ponto$/, ""))) ?? achados[0];
   if (!feicao) return;
-  const camada = CAMADAS.find((c) => c.id === feicao.layer.id.replace(/__ponto$/, ""));
-  const props = feicao.properties;
+  const camada = CAMADAS.find((c) => c.id === feicao.layer.id.replace(/__ponto$/, ""))
+    ?? (feicao.layer.id === ID_BIVARIADO ? camadaBivariadoAtual : null);
+  if (!camada) return;
+  const props = { ...feicao.properties };
   let campos = camada.campos ?? CAMPOS_POPUP[camada.id]
     ?? [["ha_no_nucleo", "Área no núcleo (ha)", "n"], ["km_no_nucleo", "Extensão no núcleo (km)", "n"]];
+  if (camada.id === ID_BIVARIADO && bivariado?.qx && bivariado?.qy) {
+    const { x, y, qx, qy } = bivariado;
+    const cx = classeDe(props[x.campo], qx);
+    const cy = classeDe(props[y.campo], qy);
+    const rotulo = ["Baixo", "Médio", "Alto"];
+    campos = [
+      [x.campo, `Horizontal · ${x.nome}`, "n"],
+      [y.campo, `Vertical · ${y.nome}`, "n"],
+      ...campos.filter(([c]) => c !== x.campo && c !== y.campo),
+    ];
+    if (cx >= 0 && cy >= 0) {
+      campos = [["__combinacao", "Combinação"], ...campos];
+      props.__combinacao = `${rotulo[cy]} no vertical × ${rotulo[cx].toLowerCase()} no horizontal`;
+    }
+  }
   // O titulo e so o nome da camada; o nome da feicao vai como primeiro campo da tabela.
   if (camada.titulo_popup && !campos.some(([c]) => c === camada.titulo_popup)) {
     campos = [[camada.titulo_popup, "Nome"], ...campos];

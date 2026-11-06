@@ -137,6 +137,7 @@ function expressaoDeCor(camada) {
 // Devolve a camada com a legenda reduzida as classes que aparecem nas feicoes desenhadas.
 // Sem feicoes, com uma classe so ou com expressao que nao sei avaliar, devolve como esta.
 export function comClassesPresentes(camada, feicoes) {
+  if (camada.gradeBivariada) return camada;
   if (camada.legenda.length <= 1 || !feicoes?.length) return camada;
   const expr = expressaoDeCor(camada);
   if (!Array.isArray(expr)) return camada;
@@ -156,6 +157,12 @@ export function comClassesPresentes(camada, feicoes) {
 }
 
 export function itensLegenda(camada) {
+  if (camada.gradeBivariada) {
+    return [
+      { tipo: "titulo", nivel: 0, texto: camada.titulo, camada: camada.id },
+      { tipo: "grade", nivel: 1, texto: "", camada: camada.id, grade: camada.gradeBivariada },
+    ];
+  }
   // Camada de classes que ficou com uma so no recorte continua com titulo e classe, para
   // nao perder o nome da classe.
   if (camada.legenda.length === 1 && !camada.comClasses) {
