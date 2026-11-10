@@ -319,11 +319,12 @@ GRUPO "SELEÇÃO DE MUNICÍPIOS" (29/10/2026, reunião de 27/10, pedido do Gusta
 Tema novo, o último grupo do painel, com um mapa por critério da seleção de municípios: o valor
 bruto de cada um dos 158 municípios dos seis núcleos, em classes de cor por eixo
 (agropecuário em laranja, governança em roxo, ambiental em verde, biodiversidade em azul).
-São 15 critérios: pastagem degradada (vigor baixo + médio), empresas de ATER, soja,
+São 16 critérios: pastagem degradada (vigor baixo + médio), empresas de ATER, soja,
 bovinos, propriedades, GGE, comitês, passivo do CAR, área protegida (UC e RPPN),
 vegetação nativa, áreas prioritárias ponderadas, número de PANs, área com PAN, riqueza e
-registros de plantas invasoras.
-1. Fonte: 018_metodologia_indicadores/Tabela_integrada_municipios_v20261029.xlsx.
+registros de plantas invasoras, e comprometimento hídrico (IFSP/MMA, demanda 025, 10/11/2026).
+1. Fonte: 018_metodologia_indicadores/Tabela_integrada_municipios_v20261029.xlsx e
+   025_risco_hidrico/Risco_hidrico_municipios_v20261110.xlsx (ind_agua).
 2. _08_selecao_municipios.py grava vertentes.selecao_municipios (geometria dos municípios
    com todos os critérios, nome de campo legível) e uma view por critério (sel_<critério>),
    registradas no catálogo com tema selecao e na presença. Clicar em qualquer critério

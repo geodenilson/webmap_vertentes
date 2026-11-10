@@ -23,8 +23,9 @@ import psycopg2
 
 PASTA = Path(__file__).resolve().parent
 TABELA = PASTA.parent / "018_metodologia_indicadores" / "Tabela_integrada_municipios_v20261029.xlsx"
+HIDRO = PASTA.parent / "025_risco_hidrico" / "Risco_hidrico_municipios_v20261110.xlsx"
 SAIDA_JS = PASTA / "web" / "js" / "selecao.js"
-VERSAO = "v20261029"
+VERSAO = "v20261110"
 
 PALETAS = {
     "Agropecuário": ["#fdd49e", "#fdbb84", "#fc8d59", "#e34a33", "#b30000"],
@@ -56,6 +57,8 @@ CRITERIOS = [
      "Plantas invasoras (espécies)", 0),
     ("invasoras_densidade", "Biodiversidade", "Plantas invasoras: registros",
      "bio_inv_plantas_dens_100km2", "Registros de plantas invasoras (por 100 km²)", 2),
+    ("risco_hidrico", "Biodiversidade", "Comprometimento hídrico",
+     "ind_agua", "Comprometimento hídrico (0 a 1)", 3),
 ]
 # Unidade escrita em cada faixa da legenda.
 UNIDADE_LEGENDA = {
@@ -63,11 +66,13 @@ UNIDADE_LEGENDA = {
     "propriedades": "propriedades", "governanca_gge": "pontos", "comites": "pontos", "passivo_car": "ha",
     "area_protegida": "ha", "vegetacao_nativa": "ha", "areas_prioritarias": "ha × classe", "pan_n": "PANs",
     "pan_area": "% do município", "invasoras_riqueza": "espécies", "invasoras_densidade": "registros por 100 km²",
+    "risco_hidrico": "índice",
 }
 # Entram so no popup, como apoio de leitura.
 EXTRAS = [
     ("amb_veg_nativa_pct", "Vegetação nativa (% do município)", 1),
     ("amb_area_protegida_pct", "Área protegida (% do município)", 1),
+    ("perc_tipologias_criticas", "Tipologias hídricas críticas (% do município)", 1),
 ]
 
 
@@ -155,6 +160,13 @@ def unidade(nome: str) -> str:
 
 def main() -> None:
     t = pd.read_excel(TABELA, sheet_name="municipios", dtype={"cd_mun": str})
+    t["cd_mun"] = t["cd_mun"].astype(str).str.zfill(7)
+    hid = pd.read_excel(HIDRO, sheet_name="por_municipio", dtype={"cd_mun": str})
+    hid["cd_mun"] = hid["cd_mun"].astype(str).str.zfill(7)
+    t = t.merge(hid[["nucleo", "cd_mun", "ind_agua", "perc_tipologias_criticas"]],
+                on=["nucleo", "cd_mun"], how="left")
+    if t["ind_agua"].isna().any():
+        raise SystemExit("municipio da tabela integrada sem comprometimento hidrico")
     campos = [(c[3], c[4], c[5]) for c in CRITERIOS] + EXTRAS
     dados = t[["nucleo", "cd_mun"]].copy()
     for coluna, nome, casas in campos:
@@ -199,7 +211,7 @@ def main() -> None:
                  zoom_minimo, tolerancia_m, base, vira_ponto, recorta_municipio)
             values (%s, %s, 'selecao', 'MULTIPOLYGON', %s, %s, %s, %s, 0, 5, %s, false, true)
         """, (camada, f"{eixo} · {titulo}", n, VERSAO,
-              "Tabela integrada de municípios, demanda 018 (Ernani, MapBiomas, CNUC, MMA, ICMBio, Sühs et al. 2025)",
+              "Tabela integrada de municípios, demanda 018; comprometimento hídrico IFSP/MMA 22/05/2026 (demanda 025)",
               f"Valor bruto do critério: {nome}.", TABELA.name))
         cur.execute("""
             insert into vertentes.presenca (camada, nucleo, cd_mun)

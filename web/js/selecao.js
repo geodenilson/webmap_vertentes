@@ -2,6 +2,175 @@
 // Um mapa por criterio da selecao de municipios (reuniao de 27/10/2026).
 export const CAMADAS_SELECAO = [
   {
+    "id": "sel_risco_hidrico",
+    "titulo": "Biodiversidade · Comprometimento hídrico (0 a 1)",
+    "tema": "selecao",
+    "tipo": "fill",
+    "pintura": {
+      "fill-color": [
+        "step",
+        [
+          "to-number",
+          [
+            "get",
+            "Comprometimento hídrico (0 a 1)"
+          ],
+          -1
+        ],
+        "#bdbdbd",
+        0,
+        "#efece6",
+        1e-09,
+        "#9ecae1",
+        0.17,
+        "#6baed6",
+        0.21,
+        "#3182bd",
+        0.32,
+        "#08519c"
+      ],
+      "fill-opacity": 0.8
+    },
+    "contorno": {
+      "line-color": "#ffffff",
+      "line-width": 0.6
+    },
+    "legenda": [
+      [
+        "Zero",
+        "#efece6"
+      ],
+      [
+        "Acima de 0 a 0,17 índice",
+        "#9ecae1"
+      ],
+      [
+        "0,17 a 0,21 índice",
+        "#6baed6"
+      ],
+      [
+        "0,21 a 0,32 índice",
+        "#3182bd"
+      ],
+      [
+        "0,32 a 0,37 índice",
+        "#08519c"
+      ]
+    ],
+    "titulo_popup": "nm_mun",
+    "rotulo": "nm_mun",
+    "campos": [
+      [
+        "nm_mun",
+        "Município"
+      ],
+      [
+        "Comprometimento hídrico (0 a 1)",
+        "Comprometimento hídrico (0 a 1)",
+        "n"
+      ],
+      [
+        "nome_nucleo",
+        "Núcleo"
+      ],
+      [
+        "sigla_uf",
+        "UF"
+      ],
+      [
+        "Pastagem vigor baixo + médio (ha)",
+        "Pastagem vigor baixo + médio (ha)",
+        "n"
+      ],
+      [
+        "Empresas de ATER (nº)",
+        "Empresas de ATER (nº)",
+        "n"
+      ],
+      [
+        "Soja (ha)",
+        "Soja (ha)",
+        "n"
+      ],
+      [
+        "Bovinos (cabeças)",
+        "Bovinos (cabeças)",
+        "n"
+      ],
+      [
+        "Propriedades (nº)",
+        "Propriedades (nº)",
+        "n"
+      ],
+      [
+        "Governança GGE (pontos)",
+        "Governança GGE (pontos)",
+        "n"
+      ],
+      [
+        "Comitês de bacia (pontos)",
+        "Comitês de bacia (pontos)",
+        "n"
+      ],
+      [
+        "Passivo no CAR (ha)",
+        "Passivo no CAR (ha)",
+        "n"
+      ],
+      [
+        "Área protegida, UC e RPPN (ha)",
+        "Área protegida, UC e RPPN (ha)",
+        "n"
+      ],
+      [
+        "Vegetação nativa (ha)",
+        "Vegetação nativa (ha)",
+        "n"
+      ],
+      [
+        "Áreas prioritárias, ha x classe",
+        "Áreas prioritárias, ha x classe",
+        "n"
+      ],
+      [
+        "PANs (nº)",
+        "PANs (nº)",
+        "n"
+      ],
+      [
+        "Área com PAN (%)",
+        "Área com PAN (%)",
+        "n"
+      ],
+      [
+        "Plantas invasoras (espécies)",
+        "Plantas invasoras (espécies)",
+        "n"
+      ],
+      [
+        "Registros de plantas invasoras (por 100 km²)",
+        "Registros de plantas invasoras (por 100 km²)",
+        "n"
+      ],
+      [
+        "Vegetação nativa (% do município)",
+        "Vegetação nativa (% do município)",
+        "n"
+      ],
+      [
+        "Área protegida (% do município)",
+        "Área protegida (% do município)",
+        "n"
+      ],
+      [
+        "Tipologias hídricas críticas (% do município)",
+        "Tipologias hídricas críticas (% do município)",
+        "n"
+      ]
+    ],
+    "nota": "Comprometimento hídrico (0 a 1). Classes pelos quantis dos 158 municípios dos seis núcleos."
+  },
+  {
     "id": "sel_invasoras_densidade",
     "titulo": "Biodiversidade · Plantas invasoras: registros (por 100 km²)",
     "tema": "selecao",
@@ -148,6 +317,11 @@ export const CAMADAS_SELECAO = [
         "n"
       ],
       [
+        "Comprometimento hídrico (0 a 1)",
+        "Comprometimento hídrico (0 a 1)",
+        "n"
+      ],
+      [
         "Vegetação nativa (% do município)",
         "Vegetação nativa (% do município)",
         "n"
@@ -155,6 +329,11 @@ export const CAMADAS_SELECAO = [
       [
         "Área protegida (% do município)",
         "Área protegida (% do município)",
+        "n"
+      ],
+      [
+        "Tipologias hídricas críticas (% do município)",
+        "Tipologias hídricas críticas (% do município)",
         "n"
       ]
     ],
@@ -307,6 +486,11 @@ export const CAMADAS_SELECAO = [
         "n"
       ],
       [
+        "Comprometimento hídrico (0 a 1)",
+        "Comprometimento hídrico (0 a 1)",
+        "n"
+      ],
+      [
         "Vegetação nativa (% do município)",
         "Vegetação nativa (% do município)",
         "n"
@@ -314,6 +498,11 @@ export const CAMADAS_SELECAO = [
       [
         "Área protegida (% do município)",
         "Área protegida (% do município)",
+        "n"
+      ],
+      [
+        "Tipologias hídricas críticas (% do município)",
+        "Tipologias hídricas críticas (% do município)",
         "n"
       ]
     ],
@@ -460,6 +649,11 @@ export const CAMADAS_SELECAO = [
         "n"
       ],
       [
+        "Comprometimento hídrico (0 a 1)",
+        "Comprometimento hídrico (0 a 1)",
+        "n"
+      ],
+      [
         "Vegetação nativa (% do município)",
         "Vegetação nativa (% do município)",
         "n"
@@ -467,6 +661,11 @@ export const CAMADAS_SELECAO = [
       [
         "Área protegida (% do município)",
         "Área protegida (% do município)",
+        "n"
+      ],
+      [
+        "Tipologias hídricas críticas (% do município)",
+        "Tipologias hídricas críticas (% do município)",
         "n"
       ]
     ],
@@ -613,6 +812,11 @@ export const CAMADAS_SELECAO = [
         "n"
       ],
       [
+        "Comprometimento hídrico (0 a 1)",
+        "Comprometimento hídrico (0 a 1)",
+        "n"
+      ],
+      [
         "Vegetação nativa (% do município)",
         "Vegetação nativa (% do município)",
         "n"
@@ -620,6 +824,11 @@ export const CAMADAS_SELECAO = [
       [
         "Área protegida (% do município)",
         "Área protegida (% do município)",
+        "n"
+      ],
+      [
+        "Tipologias hídricas críticas (% do município)",
+        "Tipologias hídricas críticas (% do município)",
         "n"
       ]
     ],
@@ -772,6 +981,11 @@ export const CAMADAS_SELECAO = [
         "n"
       ],
       [
+        "Comprometimento hídrico (0 a 1)",
+        "Comprometimento hídrico (0 a 1)",
+        "n"
+      ],
+      [
         "Vegetação nativa (% do município)",
         "Vegetação nativa (% do município)",
         "n"
@@ -779,6 +993,11 @@ export const CAMADAS_SELECAO = [
       [
         "Área protegida (% do município)",
         "Área protegida (% do município)",
+        "n"
+      ],
+      [
+        "Tipologias hídricas críticas (% do município)",
+        "Tipologias hídricas críticas (% do município)",
         "n"
       ]
     ],
@@ -931,6 +1150,11 @@ export const CAMADAS_SELECAO = [
         "n"
       ],
       [
+        "Comprometimento hídrico (0 a 1)",
+        "Comprometimento hídrico (0 a 1)",
+        "n"
+      ],
+      [
         "Vegetação nativa (% do município)",
         "Vegetação nativa (% do município)",
         "n"
@@ -938,6 +1162,11 @@ export const CAMADAS_SELECAO = [
       [
         "Área protegida (% do município)",
         "Área protegida (% do município)",
+        "n"
+      ],
+      [
+        "Tipologias hídricas críticas (% do município)",
+        "Tipologias hídricas críticas (% do município)",
         "n"
       ]
     ],
@@ -1090,6 +1319,11 @@ export const CAMADAS_SELECAO = [
         "n"
       ],
       [
+        "Comprometimento hídrico (0 a 1)",
+        "Comprometimento hídrico (0 a 1)",
+        "n"
+      ],
+      [
         "Vegetação nativa (% do município)",
         "Vegetação nativa (% do município)",
         "n"
@@ -1097,6 +1331,11 @@ export const CAMADAS_SELECAO = [
       [
         "Área protegida (% do município)",
         "Área protegida (% do município)",
+        "n"
+      ],
+      [
+        "Tipologias hídricas críticas (% do município)",
+        "Tipologias hídricas críticas (% do município)",
         "n"
       ]
     ],
@@ -1253,6 +1492,11 @@ export const CAMADAS_SELECAO = [
         "n"
       ],
       [
+        "Comprometimento hídrico (0 a 1)",
+        "Comprometimento hídrico (0 a 1)",
+        "n"
+      ],
+      [
         "Vegetação nativa (% do município)",
         "Vegetação nativa (% do município)",
         "n"
@@ -1260,6 +1504,11 @@ export const CAMADAS_SELECAO = [
       [
         "Área protegida (% do município)",
         "Área protegida (% do município)",
+        "n"
+      ],
+      [
+        "Tipologias hídricas críticas (% do município)",
+        "Tipologias hídricas críticas (% do município)",
         "n"
       ]
     ],
@@ -1416,6 +1665,11 @@ export const CAMADAS_SELECAO = [
         "n"
       ],
       [
+        "Comprometimento hídrico (0 a 1)",
+        "Comprometimento hídrico (0 a 1)",
+        "n"
+      ],
+      [
         "Vegetação nativa (% do município)",
         "Vegetação nativa (% do município)",
         "n"
@@ -1423,6 +1677,11 @@ export const CAMADAS_SELECAO = [
       [
         "Área protegida (% do município)",
         "Área protegida (% do município)",
+        "n"
+      ],
+      [
+        "Tipologias hídricas críticas (% do município)",
+        "Tipologias hídricas críticas (% do município)",
         "n"
       ]
     ],
@@ -1579,6 +1838,11 @@ export const CAMADAS_SELECAO = [
         "n"
       ],
       [
+        "Comprometimento hídrico (0 a 1)",
+        "Comprometimento hídrico (0 a 1)",
+        "n"
+      ],
+      [
         "Vegetação nativa (% do município)",
         "Vegetação nativa (% do município)",
         "n"
@@ -1586,6 +1850,11 @@ export const CAMADAS_SELECAO = [
       [
         "Área protegida (% do município)",
         "Área protegida (% do município)",
+        "n"
+      ],
+      [
+        "Tipologias hídricas críticas (% do município)",
+        "Tipologias hídricas críticas (% do município)",
         "n"
       ]
     ],
@@ -1738,6 +2007,11 @@ export const CAMADAS_SELECAO = [
         "n"
       ],
       [
+        "Comprometimento hídrico (0 a 1)",
+        "Comprometimento hídrico (0 a 1)",
+        "n"
+      ],
+      [
         "Vegetação nativa (% do município)",
         "Vegetação nativa (% do município)",
         "n"
@@ -1745,6 +2019,11 @@ export const CAMADAS_SELECAO = [
       [
         "Área protegida (% do município)",
         "Área protegida (% do município)",
+        "n"
+      ],
+      [
+        "Tipologias hídricas críticas (% do município)",
+        "Tipologias hídricas críticas (% do município)",
         "n"
       ]
     ],
@@ -1897,6 +2176,11 @@ export const CAMADAS_SELECAO = [
         "n"
       ],
       [
+        "Comprometimento hídrico (0 a 1)",
+        "Comprometimento hídrico (0 a 1)",
+        "n"
+      ],
+      [
         "Vegetação nativa (% do município)",
         "Vegetação nativa (% do município)",
         "n"
@@ -1904,6 +2188,11 @@ export const CAMADAS_SELECAO = [
       [
         "Área protegida (% do município)",
         "Área protegida (% do município)",
+        "n"
+      ],
+      [
+        "Tipologias hídricas críticas (% do município)",
+        "Tipologias hídricas críticas (% do município)",
         "n"
       ]
     ],
@@ -2056,6 +2345,11 @@ export const CAMADAS_SELECAO = [
         "n"
       ],
       [
+        "Comprometimento hídrico (0 a 1)",
+        "Comprometimento hídrico (0 a 1)",
+        "n"
+      ],
+      [
         "Vegetação nativa (% do município)",
         "Vegetação nativa (% do município)",
         "n"
@@ -2063,6 +2357,11 @@ export const CAMADAS_SELECAO = [
       [
         "Área protegida (% do município)",
         "Área protegida (% do município)",
+        "n"
+      ],
+      [
+        "Tipologias hídricas críticas (% do município)",
+        "Tipologias hídricas críticas (% do município)",
         "n"
       ]
     ],
@@ -2215,6 +2514,11 @@ export const CAMADAS_SELECAO = [
         "n"
       ],
       [
+        "Comprometimento hídrico (0 a 1)",
+        "Comprometimento hídrico (0 a 1)",
+        "n"
+      ],
+      [
         "Vegetação nativa (% do município)",
         "Vegetação nativa (% do município)",
         "n"
@@ -2222,6 +2526,11 @@ export const CAMADAS_SELECAO = [
       [
         "Área protegida (% do município)",
         "Área protegida (% do município)",
+        "n"
+      ],
+      [
+        "Tipologias hídricas críticas (% do município)",
+        "Tipologias hídricas críticas (% do município)",
         "n"
       ]
     ],
@@ -2374,6 +2683,11 @@ export const CAMADAS_SELECAO = [
         "n"
       ],
       [
+        "Comprometimento hídrico (0 a 1)",
+        "Comprometimento hídrico (0 a 1)",
+        "n"
+      ],
+      [
         "Vegetação nativa (% do município)",
         "Vegetação nativa (% do município)",
         "n"
@@ -2381,6 +2695,11 @@ export const CAMADAS_SELECAO = [
       [
         "Área protegida (% do município)",
         "Área protegida (% do município)",
+        "n"
+      ],
+      [
+        "Tipologias hídricas críticas (% do município)",
+        "Tipologias hídricas críticas (% do município)",
         "n"
       ]
     ],
