@@ -135,9 +135,9 @@ export const CAMADAS = [
     filtro: ["all", ["has", "nome"], ["!=", ["get", "nome"], ""]],
     nota: "Filtro padrão: só os trechos com nome. Na vista dos seis núcleos use Rios principais." },
   { id: "rios_principais", titulo: "Rios principais", tema: "hidro",
-    ligada: true, ...linha("#1a5276", 2), legenda: [["Curso conectado, 150 km ou mais", "#1a5276", "linha"]],
+    ...linha("#1a5276", 2), legenda: [["Curso conectado, 100 km ou mais", "#1a5276", "linha"]],
     titulo_popup: "nome", rotulo: "nome",
-    nota: "Mesmo nome, trechos que se tocam, 150 km ou mais nos seis núcleos. Demanda 026." },
+    nota: "Mesmo nome, trechos que se tocam, 100 km ou mais somados nos seis núcleos. Demanda 026." },
 
   // Conservacao.
   { id: "areas_prioritarias_cerrado_pantanal_2018", titulo: "Áreas prioritárias", tema: "conservacao",
