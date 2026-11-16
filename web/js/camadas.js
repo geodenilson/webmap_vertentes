@@ -133,7 +133,11 @@ export const CAMADAS = [
   { id: "drenagem_bc250_2025", titulo: "Drenagem, BC250", tema: "hidro",
     ...linha("#4f8db8", 0.9), legenda: [["Rio com nome", "#4f8db8", "linha"]], titulo_popup: "nome", rotulo: "nome",
     filtro: ["all", ["has", "nome"], ["!=", ["get", "nome"], ""]],
-    nota: "Filtro padrão: só os trechos com nome." },
+    nota: "Filtro padrão: só os trechos com nome. Na vista dos seis núcleos use Rios principais." },
+  { id: "rios_principais", titulo: "Rios principais", tema: "hidro",
+    ligada: true, ...linha("#1a5276", 2), legenda: [["Curso conectado, 150 km ou mais", "#1a5276", "linha"]],
+    titulo_popup: "nome", rotulo: "nome",
+    nota: "Mesmo nome, trechos que se tocam, 150 km ou mais nos seis núcleos. Demanda 026." },
 
   // Conservacao.
   { id: "areas_prioritarias_cerrado_pantanal_2018", titulo: "Áreas prioritárias", tema: "conservacao",
@@ -358,6 +362,7 @@ export const CAMPOS_POPUP = {
   comites_interestaduais: [["nmcbf", "Comitê"], ["arkm2", "Área (km²)", "n"], ["poptot", "População", "n"]],
   massa_dagua_bc250_2025: [["nome", "Nome"], ["tipomassad", "Tipo"], ["regime", "Regime"], ["artificial", "Artificial"], HA],
   drenagem_bc250_2025: [["nome", "Rio"], ["regime", "Regime"], ["navegavel", "Navegável"], KM],
+  rios_principais: [["nome", "Rio"], ["nome_nucleo", "Núcleo"], KM],
   areas_prioritarias_cerrado_pantanal_2018: [["nome", "Área prioritária"], ["cod_area", "Código"],
     ["import_bio", "Importância biológica"], ["prior_acao", "Prioridade de ação"], ["acao1", "Ação principal"],
     ["area_ha", "Área total (ha)", "n"], HA],

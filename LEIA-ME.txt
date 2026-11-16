@@ -117,7 +117,9 @@ MUDANÇAS DE 16/10, PEDIDAS PELO DENILSON
    para não pesar. O tile mais pesado, o imóvel do CAR do núcleo 3 inteiro, tem 1,5 MB
    e leva cerca de 4 s.
    Filtro padrão na drenagem: só os trechos com nome. No núcleo 2 são 6.082 com nome
-   e 3.895 sem.
+   e 3.895 sem. Essa camada continua presa ao núcleo escolhido.
+   A vista dos seis núcleos usa rios_principais (demanda 026, 16/11/2026): curso do
+   mesmo nome, conectado, com 150 km ou mais. Liga sozinha na abertura do mapa.
 3. Cursos d'água da ANA saíram do mapa e do banco. Continuam na base oficial.
 4. Botão direito sobre a camada, no painel ou na legenda: cor de cada classe,
    transparência e espessura de linha, contorno ou ponto. "Voltar ao padrão" desfaz.
