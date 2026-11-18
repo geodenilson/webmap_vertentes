@@ -227,6 +227,10 @@ export const CAMADAS = [
     contorno: { "line-color": "#7c2b08", "line-width": 0.8 },
     legenda: FASE_QUILOMBO.map(([r, c]) => [r === "TITULO PARCIAL" ? "Título parcial" : r, c]),
     titulo_popup: "nm_comunid", rotulo: "nm_comunid" },
+  { id: "sitios_arqueologicos", titulo: "Sítios arqueológicos, IPHAN", tema: "povos",
+    ...ponto("#8c3b2a", 4), legenda: [["Sítio arqueológico", "#8c3b2a", "ponto"]],
+    titulo_popup: "identifica",
+    nota: "SICG/IPHAN, 18/11/2026. Só os sítios dentro dos seis núcleos." },
 
   // Pressao e fiscalizacao.
   // PRODES: Cerrado, Caatinga e Pantanal juntos em duas camadas (sql/26).
@@ -405,6 +409,8 @@ export const CAMPOS_POPUP = {
     ["modalidade", "Modalidade"], ["municipio_", "Município"], ["superficie", "Superfície (ha)", "n"]],
   quilombolas: [["nm_comunid", "Comunidade"], ["nm_municip", "Município"], ["fase", "Fase"], ["esfera", "Esfera"],
     ["nr_familia", "Famílias", "n"], ["nr_area_ha", "Área (ha)", "n"]],
+  sitios_arqueologicos: [["identifica", "Sítio"], ["ds_classif", "Classificação"], ["nm_mun", "Município"],
+    ["sigla_uf", "UF"], ["nome_nucleo", "Núcleo"], ["co_iphan", "Código IPHAN"]],
   prodes_acumulado: [["class_name", "Classe"], ["bioma", "Bioma"], ["ha_no_nucleo", "Área (ha)", "n"]],
   prodes_anual: [["year", "Ano"], ["bioma", "Bioma"], ["image_date", "Data da imagem"], ["ha_no_nucleo", "Área (ha)", "n"]],
   pastagem_vigor_lapig_2024: [["vigor", "Vigor"], ["ha_no_nucleo", "Área (ha)", "n"]],
