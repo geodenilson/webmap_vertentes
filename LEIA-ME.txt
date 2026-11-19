@@ -475,6 +475,10 @@ AJUSTES DE 30/10/2026 (pedido do Denilson)
 10. sql/28: com um imóvel aberto, municípios e os mapas da seleção (sel_*) não são mais
    recortados pelo imóvel. Recortado, o contorno do município corria sobre o limite do
    imóvel.
+20. Grupo Fogo (19/11, pedido do Gustavo). Recorrência de fogo, 1985–2025: média dos
+   anos em que o hectare queimou, MapBiomas Fogo coleção 5, por município dos seis
+   núcleos. Brigadas: ponto da base do PAMGIA dentro dos seis núcleos. As duas abrem
+   desligadas. Demanda 027.
 
 REPOSITÓRIO E PUBLICAÇÃO
 GitHub: https://github.com/geodenilson/webmap_vertentes (ramo main). Sobe tudo, menos o

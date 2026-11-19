@@ -14,6 +14,7 @@ export const TEMAS = [
   ["fundiario", "Fundiário"],
   ["povos", "Povos e comunidades"],
   ["pressao", "Pressão e fiscalização"],
+  ["fogo", "Fogo"],
   ["fisico", "Meio físico e vegetação"],
   ["infra", "Infraestrutura"],
   ["selecao", "Seleção de municípios"],
@@ -61,6 +62,21 @@ const FASE_QUILOMBO = [
 const VIGOR_PASTAGEM = [["1", "#a61c00"], ["2", "#fdae61"], ["3", "#2d7bb6"]];
 const ROTULO_VIGOR = { 1: "Vigor baixo", 2: "Vigor médio", 3: "Vigor alto" };
 export const SITUACAO_CAR = { AT: "Ativo", PE: "Pendente", SU: "Suspenso", CA: "Cancelado" };
+const BRIGADA = [
+  ["Prevfogo", "#c1440e"],
+  ["ICMBio", "#1f8d49"],
+  ["Brigada Voluntária", "#d9a13b"],
+  ["CBM", "#2f6b8f"],
+];
+const RECORRENCIA = [
+  "step", ["to-number", ["get", "media_anos"], -1],
+  "#bdbdbd",
+  0, "#ffffb2",
+  0.25, "#fecc5c",
+  0.41, "#fd8d3c",
+  0.63, "#f03b20",
+  1.07, "#bd0026",
+];
 const ANO_PRODES = [
   "interpolate", ["linear"], ["to-number", ["get", "year"], 2002],
   2002, "#f6d8a8", 2012, "#ec9a52", 2019, "#d6512a", 2025, "#8f1d10",
@@ -106,6 +122,21 @@ export const CAMADAS = [
   // Selecao de municipios: um mapa por criterio, valor bruto em classes (gerado por
   // _08_selecao_municipios.py). Fica embaixo dos temas de feicao.
   ...CAMADAS_SELECAO,
+
+  // Fogo: media de anos queimados, 1985-2025, por municipio. Desligada na abertura.
+  { id: "recorrencia_fogo", titulo: "Recorrência de fogo, 1985–2025", tema: "fogo",
+    tipo: "fill",
+    pintura: { "fill-color": RECORRENCIA, "fill-opacity": 0.85 },
+    contorno: { "line-color": "#ffffff", "line-width": 0.6 },
+    legenda: [
+      ["Até 0,25 ano", "#ffffb2"],
+      ["0,25 a 0,41 ano", "#fecc5c"],
+      ["0,41 a 0,63 ano", "#fd8d3c"],
+      ["0,63 a 1,07 ano", "#f03b20"],
+      ["1,07 a 4,26 anos", "#bd0026"],
+    ],
+    titulo_popup: "nm_mun", rotulo: "nm_mun",
+    nota: "A recorrência é o MapBiomas Fogo, coleção 5, de 1985 a 2025. A cor é a média de anos em que o hectare queimou." },
 
   // Agua e governanca.
   { id: "regioes_hidrograficas", titulo: "Regiões hidrográficas, ANA", tema: "hidro",
@@ -276,6 +307,23 @@ export const CAMADAS = [
   { id: "ferrovias_bc250_2025", titulo: "Ferrovias, BC250", tema: "infra",
     ...linha("#3a3632", 1.4, [2, 1]), legenda: [["Ferrovia", "#3a3632", "linha"]], titulo_popup: "nome" },
 
+  { id: "brigadas_ponto", titulo: "Brigadas", tema: "fogo",
+    tipo: "circle",
+    pintura: {
+      "circle-color": categorias("instituicao", BRIGADA),
+      "circle-radius": 5,
+      "circle-stroke-color": "#ffffff",
+      "circle-stroke-width": 1,
+    },
+    legenda: [
+      ["Prevfogo", "#c1440e", "ponto"],
+      ["ICMBio", "#1f8d49", "ponto"],
+      ["Brigada voluntária", "#d9a13b", "ponto"],
+      ["Corpo de bombeiros", "#2f6b8f", "ponto"],
+    ],
+    titulo_popup: "base",
+    nota: "PAMGIA/Ibama, 18/11/2026. Ponto da base dentro dos seis núcleos." },
+
   // Limites, por cima de tudo.
   { id: "biomas_ibge_2025", titulo: "Biomas, IBGE", tema: "limites", contexto: true,
     ...linha("#6f6a60", 1.2, [6, 3]), legenda: [["Limite de bioma", "#6f6a60", "linha"]], titulo_popup: "nm_bioma" },
@@ -338,6 +386,8 @@ export const RESUMO = {
   ferrovias_bc250_2025: { nome: "nome" },
   vegetacao_ibge_2026: { classe: "legenda_1" },
   sedes_municipais_bc250_2025: { nome: "nome" },
+  recorrencia_fogo: { nome: "nm_mun" },
+  brigadas_ponto: { classe: "instituicao", nome: "base" },
   municipios_malha_2025: { nome: "nm_mun" },
   nucleos_malha_2025: { nome: "nome_nucleo" },
   biomas_ibge_2025: { classe: "nm_bioma" },
@@ -438,6 +488,11 @@ export const CAMPOS_POPUP = {
     ["area_ha", "Área (ha)", "n"]],
   limite_estadual_malha_2025: [["nm_uf", "Estado"], ["sigla_uf", "UF"], ["area_ha", "Área (ha)", "n"]],
   sedes_municipais_bc250_2025: [["nome", "Sede municipal"]],
+  recorrencia_fogo: [["nm_mun", "Município"], ["sigla_uf", "UF"], ["nome_nucleo", "Núcleo"],
+    ["media_anos", "Média de anos queimados, 1985–2025", "n"],
+    ["pct_queimou", "Queimou ao menos uma vez (% do município)", "n"]],
+  brigadas_ponto: [["base", "Base"], ["instituicao", "Instituição"], ["nm_mun", "Município"],
+    ["sigla_uf", "UF"], ["nome_nucleo", "Núcleo"]],
 };
 
 // Valores em codigo traduzidos na consulta.
@@ -446,6 +501,7 @@ export const VALOR_POPUP = {
   ind_tipo: { IRU: "Imóvel rural", AST: "Assentamento", PCT: "Povos e comunidades tradicionais" },
   classe: { APP: "APP sem vegetação", RL: "Reserva legal sem vegetação", UR: "Uso restrito sem vegetação" },
   ds_superfi: { PAV: "Pavimentada", PLA: "Em pavimentação ou planejada", N_PAV: "Não pavimentada", DUP: "Duplicada" },
+  instituicao: { CBM: "Corpo de bombeiros", "Brigada Voluntária": "Brigada voluntária" },
   class_name: { d2000: "Desmatado até 2000", d1985: "Desmatado até 1985", d1990: "Desmatado até 1990",
     d1992: "Desmatado até 1992", d1994: "Desmatado até 1994", d1995: "Desmatado até 1995",
     d1999: "Desmatado até 1999", d2022: "Desmatado em 2022" },
@@ -456,6 +512,7 @@ export const ROTULO_CLASSE = {
   car_passivo_2026_06: { APP: "APP sem vegetação", RL: "Reserva legal sem vegetação", UR: "Uso restrito sem vegetação" },
   rodovias_dnit_snv_2026_01: { PAV: "Pavimentada", PLA: "Em pavimentação ou planejada", N_PAV: "Não pavimentada" },
   pastagem_vigor_lapig_2024: ROTULO_VIGOR,
+  brigadas_ponto: { CBM: "Corpo de bombeiros", "Brigada Voluntária": "Brigada voluntária" },
   car_app_2026_10: SITUACAO_CAR,
   car_reserva_legal_2026_10: SITUACAO_CAR,
   car_uso_restrito_2026_10: SITUACAO_CAR,
